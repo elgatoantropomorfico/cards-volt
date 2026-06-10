@@ -31,21 +31,28 @@ export function CardsManager({
   profiles,
   isSuperadmin,
   lockedCompanyId,
+  onChanged,
 }: {
   cards: CardRow[];
   companies: { id: string; name: string }[];
   profiles: ProfileOpt[];
   isSuperadmin: boolean;
   lockedCompanyId?: string;
+  onChanged?: () => void;
 }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <NewCardDialog isSuperadmin={isSuperadmin} companies={companies} lockedCompanyId={lockedCompanyId} />
+        <NewCardDialog
+          isSuperadmin={isSuperadmin}
+          companies={companies}
+          lockedCompanyId={lockedCompanyId}
+          onCreated={onChanged}
+        />
       </div>
-      <div className="overflow-x-auto rounded-lg border bg-white">
+      <div className="overflow-hidden rounded-2xl border bg-card shadow-soft">
         <table className="min-w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <thead className="bg-secondary/60 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="px-4 py-2">Código</th>
               <th className="px-4 py-2">Estado</th>
@@ -57,8 +64,8 @@ export function CardsManager({
             </tr>
           </thead>
           <tbody>
-            {cards.map((c) => <Row key={c.id} c={c} profiles={profiles} />)}
-            {!cards.length && <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-500">No hay tarjetas</td></tr>}
+            {cards.map((c) => <Row key={c.id} c={c} profiles={profiles} onChanged={onChanged} />)}
+            {!cards.length && <tr><td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">No hay tarjetas</td></tr>}
           </tbody>
         </table>
       </div>
@@ -66,24 +73,24 @@ export function CardsManager({
   );
 }
 
-function Row({ c, profiles }: { c: CardRow; profiles: ProfileOpt[] }) {
+function Row({ c, profiles, onChanged }: { c: CardRow; profiles: ProfileOpt[]; onChanged?: () => void }) {
   const eligibleProfiles = profiles.filter((p) => !c.companyId || p.companyId === c.companyId);
   async function onAssign(v: string) {
     const pid = v === "none" ? null : v;
     const res = await assignCard(c.id, pid);
     if (!res.ok) toast({ title: "Error", description: res.error, variant: "error" });
-    else location.reload();
+    else { toast({ title: "Tarjeta actualizada", variant: "success" }); onChanged?.(); }
   }
   async function onStatus(v: string) {
     const res = await setCardStatus(c.id, v as CardRow["status"]);
     if (!res.ok) toast({ title: "Error", description: res.error, variant: "error" });
-    else location.reload();
+    else { toast({ title: "Estado actualizado", variant: "success" }); onChanged?.(); }
   }
   const fmt = (s: string | null) => (s ? new Date(s).toLocaleDateString() : "—");
   return (
-    <tr className="border-t align-middle">
-      <td className="px-4 py-2 font-mono text-xs">{c.code}</td>
-      <td className="px-4 py-2">
+    <tr className="border-t border-border/60 align-middle">
+      <td className="px-4 py-3 font-mono text-xs">{c.code}</td>
+      <td className="px-4 py-3">
         <Select value={c.status} onValueChange={onStatus}>
           <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -94,8 +101,8 @@ function Row({ c, profiles }: { c: CardRow; profiles: ProfileOpt[] }) {
           </SelectContent>
         </Select>
       </td>
-      <td className="px-4 py-2">{c.companyName || "—"}</td>
-      <td className="px-4 py-2">
+      <td className="px-4 py-3">{c.companyName || "—"}</td>
+      <td className="px-4 py-3">
         <Select value={c.profileId || "none"} onValueChange={onAssign}>
           <SelectTrigger className="h-8 w-[260px]"><SelectValue placeholder="—" /></SelectTrigger>
           <SelectContent>
@@ -104,9 +111,9 @@ function Row({ c, profiles }: { c: CardRow; profiles: ProfileOpt[] }) {
           </SelectContent>
         </Select>
       </td>
-      <td className="px-4 py-2 text-slate-500">{fmt(c.createdAt)}</td>
-      <td className="px-4 py-2 text-slate-500">{fmt(c.assignedAt)}</td>
-      <td className="px-4 py-2"></td>
+      <td className="px-4 py-3 text-muted-foreground">{fmt(c.createdAt)}</td>
+      <td className="px-4 py-3 text-muted-foreground">{fmt(c.assignedAt)}</td>
+      <td className="px-4 py-3"></td>
     </tr>
   );
 }
@@ -115,10 +122,12 @@ function NewCardDialog({
   isSuperadmin,
   companies,
   lockedCompanyId,
+  onCreated,
 }: {
   isSuperadmin: boolean;
   companies: { id: string; name: string }[];
   lockedCompanyId?: string;
+  onCreated?: () => void;
 }) {
   const [open, setOpen] = React.useState(false);
   const [pending, setPending] = React.useState(false);
@@ -133,13 +142,14 @@ function NewCardDialog({
     if (!res.ok) return toast({ title: "Error", description: res.error, variant: "error" });
     setOpen(false);
     setCode("");
-    location.reload();
+    toast({ title: "Tarjeta creada", variant: "success" });
+    onCreated?.();
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button><Plus className="h-4 w-4" /> Nueva tarjeta</Button>
+        <Button variant="gradient"><Plus className="h-4 w-4" /> Nueva tarjeta</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

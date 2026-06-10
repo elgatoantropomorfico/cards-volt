@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Download, Mail, MessageCircle, Phone, MapPin, ExternalLink } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { ProfileLink, ProfileView } from "@/lib/profile-types";
 import { SOCIALS } from "@/lib/socials";
 
@@ -27,76 +28,110 @@ export function readableOn(hex: string): "light" | "dark" {
   return luma > 0.6 ? "dark" : "light";
 }
 
-export function ContactActions({
+export function SaveContactButton({
   profile,
   accent,
-  variant = "premium",
+  dark,
+  className,
 }: {
   profile: ProfileView;
   accent: string;
-  variant?: "minimal" | "premium" | "corporate";
+  dark?: boolean;
+  className?: string;
 }) {
-  type Btn = { href: string; label: string; icon: React.ReactNode; download?: boolean; primary?: boolean };
-  const buttons: Btn[] = [];
-
-  buttons.push({
-    href: `/${profile.slug}/vcard`,
-    label: "Guardar contacto",
-    icon: <Download className="h-4 w-4" />,
-    download: true,
-    primary: true,
-  });
-
-  if (profile.whatsapp) {
-    buttons.push({ href: `https://wa.me/${digits(profile.whatsapp)}`, label: "WhatsApp", icon: <MessageCircle className="h-4 w-4" /> });
-  }
-  if (profile.phone) {
-    buttons.push({ href: `tel:${digits(profile.phone)}`, label: "Llamar", icon: <Phone className="h-4 w-4" /> });
-  }
-  if (profile.email) {
-    buttons.push({ href: `mailto:${profile.email}`, label: "Email", icon: <Mail className="h-4 w-4" /> });
-  }
-
-  const isMinimal = variant === "minimal";
-  const isCorp = variant === "corporate";
-
+  const onAccent = readableOn(accent) === "dark" ? "#0F172A" : "#FFFFFF";
   return (
-    <div className={isCorp ? "flex flex-col gap-2" : "grid w-full grid-cols-1 gap-2 sm:grid-cols-2"}>
-      {buttons.map((b, i) => {
-        const isPrimary = !!b.primary;
-        const style: React.CSSProperties = isPrimary
-          ? { background: accent, color: readableOn(accent) === "dark" ? "#0F172A" : "#fff" }
-          : isMinimal
-            ? {
-                background: "transparent",
-                color: "currentColor",
-                border: `1px solid ${rgba(accent, 0.25)}`,
-              }
-            : {
-                background: rgba(accent, 0.12),
-                color: "currentColor",
-                border: `1px solid ${rgba(accent, 0.25)}`,
-              };
-
-        return (
-          <Link
-            key={i}
-            href={b.href}
-            target={b.href.startsWith("http") ? "_blank" : undefined}
-            {...(b.download ? { rel: "noopener" } : {})}
-            className="group inline-flex h-11 items-center justify-center gap-2 rounded-2xl text-sm font-medium shadow-soft transition-transform active:scale-[0.98]"
-            style={style}
-          >
-            {b.icon}
-            <span className="truncate">{b.label}</span>
-          </Link>
-        );
-      })}
-    </div>
+    <Link
+      href={`/${profile.slug}/vcard`}
+      className={`inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-sm font-semibold shadow-soft transition active:scale-[0.98] ${className ?? ""}`}
+      style={{ background: accent, color: onAccent }}
+    >
+      <Download className="h-4 w-4" />
+      Guardar contacto
+    </Link>
   );
 }
 
-export function SocialPills({ profile, accent, dark }: { profile: ProfileView; accent: string; dark?: boolean }) {
+type ContactChannel = {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+  color: string;
+};
+
+export function ContactRoundPills({
+  profile,
+  accent,
+  dark,
+  inline,
+}: {
+  profile: ProfileView;
+  accent: string;
+  dark?: boolean;
+  inline?: boolean;
+}) {
+  const channels: ContactChannel[] = [];
+
+  if (profile.whatsapp) {
+    channels.push({
+      href: `https://wa.me/${digits(profile.whatsapp)}`,
+      label: "WhatsApp",
+      icon: <MessageCircle className="h-4 w-4" />,
+      color: "#25D366",
+    });
+  }
+  if (profile.phone) {
+    channels.push({
+      href: `tel:${digits(profile.phone)}`,
+      label: "Llamar",
+      icon: <Phone className="h-4 w-4" />,
+      color: accent,
+    });
+  }
+  if (profile.email) {
+    channels.push({
+      href: `mailto:${profile.email}`,
+      label: "Email",
+      icon: <Mail className="h-4 w-4" />,
+      color: dark ? "#fff" : "#0F172A",
+    });
+  }
+
+  if (!channels.length) return inline ? null : null;
+
+  const pills = channels.map((c) => (
+        <a
+          key={c.label}
+          href={c.href}
+          target={c.href.startsWith("http") ? "_blank" : undefined}
+          rel={c.href.startsWith("http") ? "noopener noreferrer" : undefined}
+          aria-label={c.label}
+          className="grid h-11 w-11 place-items-center rounded-full border shadow-soft transition active:scale-95"
+          style={{
+            background: dark ? rgba("#ffffff", 0.08) : rgba(accent, 0.08),
+            borderColor: dark ? rgba("#ffffff", 0.14) : rgba(accent, 0.2),
+            color: c.color,
+          }}
+        >
+          {c.icon}
+        </a>
+  ));
+
+  if (inline) return <>{pills}</>;
+  return <div className="flex flex-wrap items-center justify-center gap-2.5">{pills}</div>;
+}
+
+export function SocialPills({
+  profile,
+  accent,
+  dark,
+  inline,
+}: {
+  profile: ProfileView;
+  accent: string;
+  dark?: boolean;
+  inline?: boolean;
+}) {
   const items: { kind: keyof typeof SOCIALS; url: string }[] = [];
   if (profile.instagram) items.push({ kind: "INSTAGRAM", url: SOCIALS.INSTAGRAM.buildUrl!(profile.instagram) });
   if (profile.linkedin) items.push({ kind: "LINKEDIN", url: ensureUrl(profile.linkedin) });
@@ -106,11 +141,9 @@ export function SocialPills({ profile, accent, dark }: { profile: ProfileView; a
   if (profile.tiktok) items.push({ kind: "TIKTOK", url: SOCIALS.TIKTOK.buildUrl!(profile.tiktok) });
   if (profile.github) items.push({ kind: "GITHUB", url: ensureUrl(profile.github) });
 
-  if (!items.length) return null;
+  if (!items.length) return inline ? null : null;
 
-  return (
-    <div className="flex flex-wrap items-center justify-center gap-2">
-      {items.map(({ kind, url }) => {
+  const pills = items.map(({ kind, url }) => {
         const Meta = SOCIALS[kind];
         const Icon = Meta.icon;
         return (
@@ -120,19 +153,20 @@ export function SocialPills({ profile, accent, dark }: { profile: ProfileView; a
             target="_blank"
             rel="noopener noreferrer"
             aria-label={Meta.label}
-            className="grid h-10 w-10 place-items-center rounded-full border transition active:scale-95"
+            className="grid h-11 w-11 place-items-center rounded-full border shadow-soft transition active:scale-95"
             style={{
-              background: dark ? rgba("#ffffff", 0.06) : rgba(accent, 0.06),
-              borderColor: dark ? rgba("#ffffff", 0.12) : rgba(accent, 0.18),
+              background: dark ? rgba("#ffffff", 0.08) : rgba(accent, 0.08),
+              borderColor: dark ? rgba("#ffffff", 0.14) : rgba(accent, 0.2),
               color: dark ? "#fff" : Meta.color,
             }}
           >
             <Icon className="h-4 w-4" />
           </a>
         );
-      })}
-    </div>
-  );
+  });
+
+  if (inline) return <>{pills}</>;
+  return <div className="flex flex-wrap items-center justify-center gap-2.5">{pills}</div>;
 }
 
 function ensureUrl(v: string) {
@@ -141,41 +175,79 @@ function ensureUrl(v: string) {
   return `https://${v}`;
 }
 
+const CONTACT_LINK_KINDS = new Set<ProfileLink["kind"]>(["EMAIL", "PHONE", "WHATSAPP"]);
+
+/** Custom links only — contact channels use round pills, not the list. */
+export function customLinksOnly(links: ProfileLink[]) {
+  return links.filter((l) => !CONTACT_LINK_KINDS.has(l.kind));
+}
+
+export function ContactAndSocialPills({
+  profile,
+  accent,
+  dark,
+  align = "center",
+}: {
+  profile: ProfileView;
+  accent: string;
+  dark?: boolean;
+  align?: "center" | "start";
+}) {
+  const hasContact = !!(profile.whatsapp || profile.phone || profile.email);
+  const hasSocial = !!(
+    profile.instagram ||
+    profile.linkedin ||
+    profile.twitter ||
+    profile.facebook ||
+    profile.youtube ||
+    profile.tiktok ||
+    profile.github
+  );
+  if (!hasContact && !hasSocial) return null;
+
+  return (
+    <div className={cn("flex flex-wrap items-center gap-2.5", align === "start" ? "justify-start" : "justify-center")}>
+      <ContactRoundPills profile={profile} accent={accent} dark={dark} inline />
+      <SocialPills profile={profile} accent={accent} dark={dark} inline />
+    </div>
+  );
+}
+
 export function LinkList({
   links,
   accent,
   variant = "minimal",
+  dark,
 }: {
   links: ProfileLink[];
   accent: string;
   variant?: "minimal" | "premium" | "corporate";
+  dark?: boolean;
 }) {
-  if (!links.length) return null;
+  const items = customLinksOnly(links);
+  if (!items.length) return null;
   return (
     <div className="flex w-full flex-col gap-2">
-      {links.map((l) => {
+      {items.map((l) => {
         const Meta = SOCIALS[l.kind] || SOCIALS.OTHER;
         const Icon = Meta.icon;
-        const cls =
-          variant === "premium"
+        const isPremium = variant === "premium";
+        const isCorp = variant === "corporate";
+        const cls = isPremium
+          ? dark
             ? "group flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-medium text-white backdrop-blur transition hover:bg-white/15"
-            : variant === "corporate"
-              ? "group flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm font-medium text-card-foreground transition hover:border-foreground/30"
-              : "group flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm font-medium text-card-foreground shadow-soft transition hover:shadow-pop";
+            : "group flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground shadow-soft transition hover:shadow-pop"
+          : isCorp
+            ? "group flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm font-medium text-card-foreground transition hover:border-foreground/30"
+            : "group flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm font-medium text-card-foreground shadow-soft transition hover:shadow-pop";
 
         return (
-          <a
-            key={l.id}
-            href={l.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cls}
-          >
+          <a key={l.id} href={l.url} target="_blank" rel="noopener noreferrer" className={cls}>
             <span
               className="grid h-9 w-9 shrink-0 place-items-center rounded-xl"
               style={{
-                background: variant === "premium" ? "rgba(255,255,255,0.12)" : rgba(accent, 0.1),
-                color: variant === "premium" ? "#fff" : Meta.color,
+                background: isPremium && dark ? "rgba(255,255,255,0.12)" : rgba(accent, 0.1),
+                color: isPremium && dark ? "#fff" : Meta.color,
               }}
             >
               <Icon className="h-4 w-4" />
@@ -192,7 +264,6 @@ export function LinkList({
 export function MapEmbed({ profile, accent, dark }: { profile: ProfileView; accent: string; dark?: boolean }) {
   if (!profile.location) return null;
   const q = encodeURIComponent(profile.location);
-  // Lightweight static-looking embed via Google Maps no-key (using their public embed)
   const src = `https://www.google.com/maps?q=${q}&output=embed`;
   return (
     <div
@@ -216,6 +287,25 @@ export function MapEmbed({ profile, accent, dark }: { profile: ProfileView; acce
         <MapPin className="h-3.5 w-3.5" />
         {profile.location}
       </a>
+    </div>
+  );
+}
+
+/** @deprecated use SaveContactButton + ContactRoundPills */
+export function ContactActions({
+  profile,
+  accent,
+  variant = "premium",
+}: {
+  profile: ProfileView;
+  accent: string;
+  variant?: "minimal" | "premium" | "corporate";
+}) {
+  const dark = variant === "premium";
+  return (
+    <div className="flex w-full flex-col gap-3">
+      <SaveContactButton profile={profile} accent={accent} dark={dark} />
+      <ContactRoundPills profile={profile} accent={accent} dark={dark} />
     </div>
   );
 }

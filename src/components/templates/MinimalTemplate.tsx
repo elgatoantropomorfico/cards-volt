@@ -2,7 +2,14 @@
 
 import * as React from "react";
 import type { ProfileLink, ProfileView } from "@/lib/profile-types";
-import { ContactActions, LinkList, MapEmbed, SocialPills, rgba } from "./shared";
+import {
+  SaveContactButton,
+  ContactAndSocialPills,
+  LinkList,
+  MapEmbed,
+  rgba,
+} from "./shared";
+import { TemplateRoot } from "./TemplateRoot";
 
 export function MinimalTemplate({
   profile,
@@ -25,8 +32,9 @@ export function MinimalTemplate({
     .toUpperCase();
 
   return (
-    <main
-      className={`relative ${fluid ? "h-full" : "min-h-screen"} ${isDark ? "bg-[#0a0a0f] text-white" : "bg-[#fafafa] text-slate-900"} overflow-y-auto`}
+    <TemplateRoot
+      fluid={fluid}
+      className={`relative ${isDark ? "bg-[#0a0a0f] text-white" : "bg-[#fafafa] text-slate-900"}`}
     >
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-72"
@@ -43,11 +51,7 @@ export function MinimalTemplate({
           <div className={`rounded-full p-[2px] ${isDark ? "bg-[#0a0a0f]" : "bg-[#fafafa]"}`}>
             {profile.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={profile.avatarUrl}
-                alt={profile.fullName}
-                className="h-24 w-24 rounded-full object-cover"
-              />
+              <img src={profile.avatarUrl} alt={profile.fullName} className="h-24 w-24 rounded-full object-cover" />
             ) : (
               <div
                 className="grid h-24 w-24 place-items-center rounded-full text-2xl font-semibold text-white"
@@ -77,14 +81,14 @@ export function MinimalTemplate({
           </p>
         ) : null}
 
-        <SocialPills profile={profile} accent={accent} dark={isDark} />
-
         <div className="w-full">
-          <ContactActions profile={profile} accent={accent} variant="minimal" />
+          <SaveContactButton profile={profile} accent={accent} dark={isDark} />
         </div>
 
+        <ContactAndSocialPills profile={profile} accent={accent} dark={isDark} />
+
         <div className="w-full">
-          <LinkList links={links} accent={accent} variant="minimal" />
+          <LinkList links={links} accent={accent} variant="minimal" dark={isDark} />
         </div>
 
         <div className="w-full">
@@ -95,6 +99,6 @@ export function MinimalTemplate({
           Powered by <span className="font-medium">Volt Cards</span>
         </footer>
       </div>
-    </main>
+    </TemplateRoot>
   );
 }

@@ -26,13 +26,16 @@ export function UsersManager({
   companies,
   isSuperadmin,
   lockedCompanyId,
+  onChanged,
 }: {
   users: Row[];
   companies: { id: string; name: string }[];
   isSuperadmin: boolean;
   lockedCompanyId?: string;
+  onChanged?: () => void;
 }) {
   const router = useRouter();
+  const refresh = onChanged ?? (() => router.refresh());
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -40,7 +43,7 @@ export function UsersManager({
           isSuperadmin={isSuperadmin}
           companies={companies}
           lockedCompanyId={lockedCompanyId}
-          onCreated={() => router.refresh()}
+          onCreated={refresh}
           trigger={
             <Button variant="gradient" size="lg">
               <Sparkles className="h-4 w-4" /> Nuevo usuario
@@ -62,7 +65,7 @@ export function UsersManager({
             </tr>
           </thead>
           <tbody className="divide-y">
-            {users.map((u) => <UserRow key={u.id} u={u} onChanged={() => router.refresh()} />)}
+            {users.map((u) => <UserRow key={u.id} u={u} onChanged={refresh} />)}
             {!users.length && <tr><td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">No hay usuarios</td></tr>}
           </tbody>
         </table>

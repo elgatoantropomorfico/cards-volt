@@ -48,8 +48,9 @@
 }
 
 * { @apply border-border; -webkit-tap-highlight-color: transparent; }
-html, body { @apply h-full; }
+html { min-height: 100%; }
 body {
+  min-height: 100%;
   @apply bg-background text-foreground antialiased;
   font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1, "cv11" 1;
   text-rendering: optimizeLegibility;

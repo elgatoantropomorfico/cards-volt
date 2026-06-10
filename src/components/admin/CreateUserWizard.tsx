@@ -358,7 +358,7 @@ export function CreateUserWizard({
                       </div>
                       <div className="grid gap-5 sm:grid-cols-2">
                         <Field label="Avatar"><ImageUpload value={data.avatarUrl} onChange={(v) => setData({ ...data, avatarUrl: v })} folder="avatars" /></Field>
-                        <Field label="Portada / Logo"><ImageUpload value={data.coverUrl} onChange={(v) => setData({ ...data, coverUrl: v })} folder="covers" shape="rect" /></Field>
+                        <Field label="Portada / Logo"><ImageUpload value={data.coverUrl} onChange={(v) => setData({ ...data, coverUrl: v })} folder="covers" shape="cover" /></Field>
                       </div>
                     </div>
                   )}

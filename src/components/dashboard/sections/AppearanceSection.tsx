@@ -167,7 +167,9 @@ export function AppearanceSection({
                 </button>
               ))}
             </div>
-            <p className="text-xs text-muted-foreground">Aplica al template Minimal. Premium siempre es oscuro, Corporate siempre claro.</p>
+            <p className="text-xs text-muted-foreground">
+              Claro u oscuro según plantilla. Premium alterna gradiente acento → fondo; Minimal y Corporate respetan el modo elegido.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -185,7 +187,7 @@ export function AppearanceSection({
             </div>
             <div className="space-y-2">
               <Label>Portada / Logo de empresa</Label>
-              <ImageUpload value={profile.coverUrl} onChange={(v) => onChange({ coverUrl: v })} folder="covers" shape="rect" hint="Se usa como cover en Premium y como logo en Corporate." />
+              <ImageUpload value={profile.coverUrl} onChange={(v) => onChange({ coverUrl: v })} folder="covers" shape="cover" hint="Portada horizontal 2:1 para Premium y Corporate." />
             </div>
           </div>
         </CardContent>

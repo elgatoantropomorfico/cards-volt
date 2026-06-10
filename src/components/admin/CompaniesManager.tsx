@@ -25,13 +25,19 @@ type Company = {
   users: number;
 };
 
-export function CompaniesManager({ companies }: { companies: Company[] }) {
+export function CompaniesManager({
+  companies,
+  onChanged,
+}: {
+  companies: Company[];
+  onChanged?: () => void;
+}) {
   return (
     <div className="space-y-4">
-      <div className="flex justify-end"><NewCompanyDialog /></div>
-      <div className="overflow-x-auto rounded-lg border bg-white">
+      <div className="flex justify-end"><NewCompanyDialog onCreated={onChanged} /></div>
+      <div className="overflow-hidden rounded-2xl border bg-card shadow-soft">
         <table className="min-w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+          <thead className="bg-secondary/60 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="px-4 py-2">Nombre</th>
               <th className="px-4 py-2">Slug</th>
@@ -46,10 +52,10 @@ export function CompaniesManager({ companies }: { companies: Company[] }) {
           </thead>
           <tbody>
             {companies.map((c) => (
-              <Row key={c.id} c={c} />
+              <Row key={c.id} c={c} onChanged={onChanged} />
             ))}
             {!companies.length && (
-              <tr><td colSpan={9} className="px-4 py-8 text-center text-slate-500">No hay empresas</td></tr>
+              <tr><td colSpan={9} className="px-4 py-12 text-center text-muted-foreground">No hay empresas</td></tr>
             )}
           </tbody>
         </table>
@@ -58,7 +64,7 @@ export function CompaniesManager({ companies }: { companies: Company[] }) {
   );
 }
 
-function Row({ c }: { c: Company }) {
+function Row({ c, onChanged }: { c: Company; onChanged?: () => void }) {
   const [active, setActive] = React.useState(c.active);
   async function onToggle(v: boolean) {
     setActive(v);
@@ -72,26 +78,26 @@ function Row({ c }: { c: Company }) {
     if (!confirm(`Eliminar "${c.name}"? Esto desvincula sus usuarios y tarjetas.`)) return;
     const res = await deleteCompany(c.id);
     if (!res.ok) toast({ title: "Error", description: res.error, variant: "error" });
-    else location.reload();
+    else { toast({ title: "Empresa eliminada", variant: "success" }); onChanged?.(); }
   }
   return (
-    <tr className="border-t">
-      <td className="px-4 py-2 font-medium">{c.name}</td>
-      <td className="px-4 py-2 text-slate-500">{c.slug}</td>
-      <td className="px-4 py-2"><Badge variant="outline">{c.type}</Badge></td>
-      <td className="px-4 py-2">{c.users}</td>
-      <td className="px-4 py-2">{c.profiles} / {c.seatsContracted}</td>
-      <td className="px-4 py-2">{c.cards}</td>
-      <td className="px-4 py-2">{c.seatsContracted}</td>
-      <td className="px-4 py-2"><Switch checked={active} onCheckedChange={onToggle} /></td>
-      <td className="px-4 py-2 text-right">
+    <tr className="border-t border-border/60">
+      <td className="px-4 py-3 font-medium">{c.name}</td>
+      <td className="px-4 py-3 text-muted-foreground">{c.slug}</td>
+      <td className="px-4 py-3"><Badge variant="outline">{c.type}</Badge></td>
+      <td className="px-4 py-3">{c.users}</td>
+      <td className="px-4 py-3">{c.profiles} / {c.seatsContracted}</td>
+      <td className="px-4 py-3">{c.cards}</td>
+      <td className="px-4 py-3">{c.seatsContracted}</td>
+      <td className="px-4 py-3"><Switch checked={active} onCheckedChange={onToggle} /></td>
+      <td className="px-4 py-3 text-right">
         <Button variant="ghost" size="icon" onClick={onDelete}><Trash2 className="h-4 w-4 text-rose-500" /></Button>
       </td>
     </tr>
   );
 }
 
-function NewCompanyDialog() {
+function NewCompanyDialog({ onCreated }: { onCreated?: () => void }) {
   const [open, setOpen] = React.useState(false);
   const [pending, setPending] = React.useState(false);
   const [form, setForm] = React.useState({
@@ -109,13 +115,14 @@ function NewCompanyDialog() {
     setPending(false);
     if (!res.ok) return toast({ title: "Error", description: res.error, variant: "error" });
     setOpen(false);
-    location.reload();
+    toast({ title: "Empresa creada", variant: "success" });
+    onCreated?.();
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button><Plus className="h-4 w-4" /> Nueva empresa</Button>
+        <Button variant="gradient"><Plus className="h-4 w-4" /> Nueva empresa</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

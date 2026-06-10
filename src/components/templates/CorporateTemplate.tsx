@@ -2,7 +2,16 @@
 
 import * as React from "react";
 import type { ProfileLink, ProfileView } from "@/lib/profile-types";
-import { ContactActions, LinkList, MapEmbed, SocialPills, rgba } from "./shared";
+import {
+  SaveContactButton,
+  ContactAndSocialPills,
+  LinkList,
+  MapEmbed,
+  rgba,
+  customLinksOnly,
+} from "./shared";
+import { TemplateRoot } from "./TemplateRoot";
+import { CoverImage } from "./CoverImage";
 
 export function CorporateTemplate({
   profile,
@@ -23,22 +32,24 @@ export function CorporateTemplate({
     .toUpperCase();
 
   return (
-    <main className={`relative ${fluid ? "h-full" : "min-h-screen"} bg-white text-slate-900 overflow-y-auto`}>
+    <TemplateRoot fluid={fluid} className="relative bg-white text-slate-900">
       <div
-        className="h-2 w-full"
+        className="h-1.5 w-full"
         style={{ background: `linear-gradient(90deg, ${accent}, ${rgba(accent, 0.3)})` }}
       />
 
+      {profile.coverUrl ? (
+        <CoverImage src={profile.coverUrl} alt={profile.companyName ?? profile.fullName} className="border-b" />
+      ) : null}
+
       <div className="mx-auto max-w-md px-6 py-8">
         <header className="flex items-center justify-between border-b border-slate-200 pb-4">
-          {profile.coverUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={profile.coverUrl} alt={profile.companyName ?? ""} className="h-8 object-contain" />
-          ) : (
+          {!profile.coverUrl && (
             <span className="text-[11px] uppercase tracking-[0.2em] text-slate-500">
               {profile.companyName || "Tarjeta digital"}
             </span>
           )}
+          {profile.coverUrl && <span />}
           <span className="font-mono text-[10px] uppercase text-slate-400">/{profile.slug}</span>
         </header>
 
@@ -80,19 +91,13 @@ export function CorporateTemplate({
           </p>
         ) : null}
 
-        <section className="mt-8">
-          <h2 className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Contacto</h2>
-          <ContactActions profile={profile} accent={accent} variant="corporate" />
+        <section className="mt-8 space-y-3">
+          <h2 className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Contacto</h2>
+          <SaveContactButton profile={profile} accent={accent} />
+          <ContactAndSocialPills profile={profile} accent={accent} align="start" />
         </section>
 
-        <section className="mt-6">
-          <h2 className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Conectar</h2>
-          <div className="flex justify-start">
-            <SocialPills profile={profile} accent={accent} />
-          </div>
-        </section>
-
-        {links.length ? (
+        {customLinksOnly(links).length ? (
           <section className="mt-6">
             <h2 className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">Enlaces</h2>
             <LinkList links={links} accent={accent} variant="corporate" />
@@ -110,6 +115,6 @@ export function CorporateTemplate({
           Powered by <span className="font-medium text-slate-600">Volt Cards</span>
         </footer>
       </div>
-    </main>
+    </TemplateRoot>
   );
 }

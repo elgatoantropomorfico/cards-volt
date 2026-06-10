@@ -6,7 +6,47 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 
-type Shape = "circle" | "rect" | "square";
+type Shape = "circle" | "square" | "cover";
+
+const COVER_W = 1200;
+const COVER_H = 600;
+
+async function cropCoverTo2x1(file: File): Promise<File> {
+  const bitmap = await createImageBitmap(file);
+  const targetRatio = 2 / 1;
+  const srcRatio = bitmap.width / bitmap.height;
+  let sx: number;
+  let sy: number;
+  let sw: number;
+  let sh: number;
+
+  if (srcRatio > targetRatio) {
+    sh = bitmap.height;
+    sw = sh * targetRatio;
+    sx = (bitmap.width - sw) / 2;
+    sy = 0;
+  } else {
+    sw = bitmap.width;
+    sh = sw / targetRatio;
+    sx = 0;
+    sy = (bitmap.height - sh) / 2;
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = COVER_W;
+  canvas.height = COVER_H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("No se pudo procesar la imagen");
+  ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, COVER_W, COVER_H);
+  bitmap.close();
+
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("No se pudo exportar la imagen"))), "image/jpeg", 0.9);
+  });
+
+  const base = file.name.replace(/\.[^.]+$/, "") || "cover";
+  return new File([blob], `${base}.jpg`, { type: "image/jpeg" });
+}
 
 export function ImageUpload({
   value,
@@ -29,10 +69,11 @@ export function ImageUpload({
 
   async function onFile(file: File) {
     setLoading(true);
-    const fd = new FormData();
-    fd.set("file", file);
-    fd.set("folder", folder);
     try {
+      const uploadFile = shape === "cover" ? await cropCoverTo2x1(file) : file;
+      const fd = new FormData();
+      fd.set("file", uploadFile);
+      fd.set("folder", folder);
       const r = await fetch("/api/upload", { method: "POST", body: fd });
       const text = await r.text();
       let data: { ok?: boolean; url?: string; error?: string } | null = null;
@@ -54,7 +95,17 @@ export function ImageUpload({
     }
   }
 
-  const dim = shape === "circle" ? "h-24 w-24 rounded-full" : shape === "square" ? "h-24 w-24 rounded-2xl" : "h-24 w-40 rounded-2xl";
+  const dim =
+    shape === "circle"
+      ? "h-24 w-24 rounded-full"
+      : shape === "cover"
+        ? "aspect-[2/1] w-full max-w-[240px] rounded-2xl"
+        : "h-24 w-24 rounded-2xl";
+
+  const defaultHint =
+    shape === "cover"
+      ? "Formato horizontal 2:1 (ej. 1200×600). Se recorta automáticamente al centro."
+      : undefined;
 
   return (
     <div className="flex items-start gap-4">
@@ -64,7 +115,10 @@ export function ImageUpload({
           dim,
           drag && "border-ring bg-accent",
         )}
-        onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDrag(true);
+        }}
         onDragLeave={() => setDrag(false)}
         onDrop={(e) => {
           e.preventDefault();
@@ -96,7 +150,7 @@ export function ImageUpload({
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
-            if (f) onFile(f);
+            if (f) void onFile(f);
             e.currentTarget.value = "";
           }}
         />
@@ -110,7 +164,9 @@ export function ImageUpload({
             Quitar
           </Button>
         ) : null}
-        {hint ? <p className="max-w-[200px] text-[11px] leading-snug text-muted-foreground">{hint}</p> : null}
+        {(hint || defaultHint) ? (
+          <p className="max-w-[220px] text-[11px] leading-snug text-muted-foreground">{hint || defaultHint}</p>
+        ) : null}
       </div>
     </div>
   );
