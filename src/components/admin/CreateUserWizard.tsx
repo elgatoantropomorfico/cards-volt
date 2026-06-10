@@ -34,12 +34,16 @@ export function CreateUserWizard({
   isSuperadmin,
   companies,
   lockedCompanyId,
+  defaultCompanyId,
+  defaultRole,
   trigger,
   onCreated,
 }: {
   isSuperadmin: boolean;
   companies: { id: string; name: string }[];
   lockedCompanyId?: string;
+  defaultCompanyId?: string;
+  defaultRole?: Role;
   trigger?: React.ReactNode;
   onCreated?: () => void;
 }) {
@@ -78,8 +82,8 @@ export function CreateUserWizard({
       name: "",
       email: "",
       password: "",
-      role: "USER",
-      companyId: lockedCompanyId ?? "",
+      role: defaultRole ?? "USER",
+      companyId: lockedCompanyId ?? defaultCompanyId ?? "",
       slug: "",
       jobTitle: "",
       companyName: "",
