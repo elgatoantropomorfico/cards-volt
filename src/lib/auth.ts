@@ -7,6 +7,13 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL || process.env.APP_URL,
+  trustedOrigins: [
+    process.env.BETTER_AUTH_URL,
+    process.env.APP_URL,
+    "https://cards.voltaiagents.com",
+    "https://web-production-c380e.up.railway.app",
+    "http://localhost:3000",
+  ].filter((v): v is string => Boolean(v)),
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
