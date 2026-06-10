@@ -1,0 +1,194 @@
+// Volt Cards V1 - Prisma schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- AUTH (Better Auth tables) ----------
+model User {
+  id            String   @id
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  role          Role     @default(USER)
+  // Tenant linkage
+  companyId     String?
+  company       Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  // One profile per user (1-1). Company can have many users (each user = 1 profile).
+  profile       Profile?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions      Session[]
+  accounts      Account[]
+
+  @@index([companyId])
+  @@map("users")
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verifications")
+}
+
+enum Role {
+  SUPERADMIN
+  COMPANY_ADMIN
+  USER
+}
+
+// ---------- TENANCY ----------
+enum CompanyType {
+  INDIVIDUAL
+  COMPANY
+}
+
+model Company {
+  id              String      @id @default(cuid())
+  name            String
+  slug            String      @unique
+  type            CompanyType @default(COMPANY)
+  logoUrl         String?
+  primaryColor    String      @default("#0F172A")
+  active          Boolean     @default(true)
+  seatsContracted Int         @default(1)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  users    User[]
+  profiles Profile[]
+  cards    NfcCard[]
+
+  @@map("companies")
+}
+
+// ---------- PROFILE (public card content) ----------
+enum Template {
+  MINIMAL
+  PREMIUM
+  CORPORATE
+}
+
+model Profile {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  active       Boolean  @default(true)
+
+  // Owner & tenant
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId    String?
+  company      Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  // Public data
+  fullName     String
+  jobTitle     String?
+  companyName  String?
+  description  String?
+  email        String?
+  phone        String?
+  whatsapp     String?
+  website      String?
+  avatarUrl    String?
+  coverUrl     String?
+
+  // Theming
+  template     Template @default(MINIMAL)
+  primaryColor String   @default("#0F172A")
+
+  links        Link[]
+  card         NfcCard?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([companyId])
+  @@map("profiles")
+}
+
+model Link {
+  id        String   @id @default(cuid())
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  label     String
+  url       String
+  icon      String?  // lucide icon name or "url"
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([profileId])
+  @@map("links")
+}
+
+// ---------- NFC CARDS ----------
+enum CardStatus {
+  UNASSIGNED
+  ACTIVE
+  INACTIVE
+  LOST
+}
+
+model NfcCard {
+  id           String     @id @default(cuid())
+  code         String     @unique // internal code printed/engraved
+  status       CardStatus @default(UNASSIGNED)
+  companyId    String?
+  company      Company?   @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  profileId    String?    @unique
+  profile      Profile?   @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  assignedAt   DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([companyId])
+  @@map("nfc_cards")
+}
