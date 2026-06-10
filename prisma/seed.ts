@@ -13,15 +13,13 @@ async function main() {
   const password = process.env.SEED_SUPERADMIN_PASSWORD || "ChangeMe!2026";
   const name = process.env.SEED_SUPERADMIN_NAME || "Super Admin";
 
+  // Delete any existing user with this email so the password hash is
+  // regenerated against the current Better Auth config (avoids stale-hash
+  // incompatibilities when the auth config changes).
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
-    if (existing.role !== "SUPERADMIN") {
-      await prisma.user.update({ where: { id: existing.id }, data: { role: "SUPERADMIN", emailVerified: true } });
-      console.log(`✔ Promoted existing user to SUPERADMIN: ${email}`);
-    } else {
-      console.log(`✔ Superadmin already exists: ${email}`);
-    }
-    return;
+    await prisma.user.delete({ where: { id: existing.id } });
+    console.log(`✔ Removed stale user ${email} (will recreate)`);
   }
 
   try {
