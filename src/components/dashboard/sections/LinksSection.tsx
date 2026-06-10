@@ -80,14 +80,18 @@ export function LinksSection({
     void reorderLinks(next.map((l) => l.id));
   }
 
-  function patch(id: string, patch: Partial<ProfileLink>) {
-    setLinks(links.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+  function patch(id: string, patchData: Partial<ProfileLink>) {
+    setLinks(links.map((l) => (l.id === id ? { ...l, ...patchData } : l)));
   }
 
   async function onSaveRow(row: ProfileLink) {
-    const res = await updateLink(row.id, { kind: row.kind, label: row.label, url: row.url });
+    const url = normalizeLinkUrl(row.kind, row.url);
+    const res = await updateLink(row.id, { kind: row.kind, label: row.label.trim(), url });
     if (!res.ok) toast({ title: "Error", description: res.error, variant: "error" });
-    else toast({ title: "Link guardado", variant: "success" });
+    else {
+      patch(row.id, { url, label: row.label.trim() });
+      toast({ title: "Link guardado", variant: "success" });
+    }
   }
 
   async function onDelete(id: string) {

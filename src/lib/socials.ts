@@ -138,3 +138,17 @@ export function normalizeLinkUrl(kind: LinkKind, raw: string): string {
   if (!/^https?:\/\//i.test(v) && !v.startsWith("mailto:") && !v.startsWith("tel:")) return `https://${v}`;
   return v;
 }
+
+/** Accepts https://..., domain.com, or empty — for profile website field. */
+export function normalizeWebsite(raw: string | null | undefined): string | null {
+  if (!raw?.trim()) return null;
+  const v = raw.trim();
+  if (/^https?:\/\//i.test(v)) return v;
+  if (/^\/\//.test(v)) return `https:${v}`;
+  return `https://${v.replace(/^\/\//, "")}`;
+}
+
+/** Optional HTTP(S) URL stored in DB (avatars, covers, etc.). */
+export function normalizeOptionalHttpUrl(raw: string | null | undefined): string | null {
+  return normalizeWebsite(raw);
+}

@@ -7,6 +7,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { isValidSlug, normalizeSlug } from "@/lib/utils";
+import { normalizeLinkUrl, normalizeWebsite } from "@/lib/socials";
+import { formatZodError, optionalHttpUrl, optionalWebsite } from "@/lib/validation";
 import type { LinkKind } from "@/lib/profile-types";
 
 export type ActionResult = { ok: true; data?: unknown } | { ok: false; error: string };
@@ -24,7 +26,7 @@ const CompanySchema = z.object({
 export async function createCompany(input: z.infer<typeof CompanySchema>): Promise<ActionResult> {
   await requireRole("SUPERADMIN");
   const parsed = CompanySchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+  if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
   const slug = normalizeSlug(parsed.data.slug);
   if (!isValidSlug(slug)) return { ok: false, error: "Slug de empresa inválido" };
   const exists = await prisma.company.findUnique({ where: { slug }, select: { id: true } });
@@ -87,7 +89,7 @@ const UserSchema = z.object({
 export async function createUser(input: z.infer<typeof UserSchema>): Promise<ActionResult> {
   const me = await requireRole("SUPERADMIN", "COMPANY_ADMIN");
   const parsed = UserSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+  if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
   // COMPANY_ADMIN can only create USER in their own company
   if (me.role === "COMPANY_ADMIN") {
@@ -154,13 +156,13 @@ const FullProfileSchema = z.object({
   description: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
   whatsapp: z.string().optional().nullable(),
-  website: z.string().optional().nullable(),
+  website: optionalWebsite,
   location: z.string().optional().nullable(),
   instagram: z.string().optional().nullable(),
   linkedin: z.string().optional().nullable(),
   twitter: z.string().optional().nullable(),
-  avatarUrl: z.string().url().optional().or(z.literal("")).nullable(),
-  coverUrl: z.string().url().optional().or(z.literal("")).nullable(),
+  avatarUrl: optionalHttpUrl,
+  coverUrl: optionalHttpUrl,
   template: z.enum(["MINIMAL", "PREMIUM", "CORPORATE"]).default("MINIMAL"),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#7C3AED"),
   themeMode: z.enum(["LIGHT", "DARK"]).default("LIGHT"),
@@ -183,7 +185,7 @@ const FullUserSchema = z.object({
 export async function createUserFull(input: z.infer<typeof FullUserSchema>): Promise<{ ok: true; slug: string } | { ok: false; error: string }> {
   const me = await requireRole("SUPERADMIN", "COMPANY_ADMIN");
   const parsed = FullUserSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+  if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
   const d = parsed.data;
 
   if (me.role === "COMPANY_ADMIN") {
@@ -367,7 +369,7 @@ const AdminUserUpdateSchema = z.object({
 export async function updateUserAdmin(input: z.infer<typeof AdminUserUpdateSchema>): Promise<ActionResult> {
   const me = await requireRole("SUPERADMIN", "COMPANY_ADMIN");
   const parsed = AdminUserUpdateSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+  if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
   const check = await assertCanManageUser(me, parsed.data.userId);
   if (!check.ok) return check;
@@ -440,7 +442,7 @@ const AdminProfileUpdateSchema = FullProfileSchema.extend({
 export async function updateUserProfileAdmin(input: z.infer<typeof AdminProfileUpdateSchema>): Promise<ActionResult> {
   const me = await requireRole("SUPERADMIN", "COMPANY_ADMIN");
   const parsed = AdminProfileUpdateSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+  if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
   const check = await assertCanManageUser(me, parsed.data.userId);
   if (!check.ok) return check;
@@ -509,8 +511,8 @@ export async function replaceUserLinksAdmin(
             data: links.map((l, idx) => ({
               profileId,
               kind: l.kind as LinkKind,
-              label: l.label,
-              url: l.url,
+              label: l.label.trim(),
+              url: normalizeLinkUrl(l.kind as LinkKind, l.url),
               order: idx,
             })),
           }),
@@ -533,7 +535,7 @@ const CardSchema = z.object({
 export async function createCard(input: z.infer<typeof CardSchema>): Promise<ActionResult> {
   const me = await requireRole("SUPERADMIN", "COMPANY_ADMIN");
   const parsed = CardSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+  if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
   const companyId = me.role === "COMPANY_ADMIN" ? me.companyId : parsed.data.companyId || null;
   const exists = await prisma.nfcCard.findUnique({ where: { code: parsed.data.code } });
   if (exists) return { ok: false, error: "Código ya existe" };

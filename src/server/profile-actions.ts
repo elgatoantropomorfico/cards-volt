@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { isValidSlug, normalizeSlug } from "@/lib/utils";
 import type { LinkKind } from "@/lib/profile-types";
+import { normalizeLinkUrl } from "@/lib/socials";
+import { formatZodError, optionalEmail, optionalHttpUrl, optionalWebsite } from "@/lib/validation";
 
 const KIND_VALUES = [
   "WEBSITE","INSTAGRAM","LINKEDIN","TWITTER","FACEBOOK","YOUTUBE","TIKTOK","GITHUB","SPOTIFY","CALENDAR","EMAIL","PHONE","WHATSAPP","MAP","PDF","OTHER",
@@ -17,10 +19,10 @@ const ProfileSchema = z.object({
   jobTitle: z.string().max(120).optional().nullable(),
   companyName: z.string().max(120).optional().nullable(),
   description: z.string().max(600).optional().nullable(),
-  email: z.string().email().optional().or(z.literal("")).nullable(),
+  email: optionalEmail,
   phone: z.string().max(40).optional().nullable(),
   whatsapp: z.string().max(40).optional().nullable(),
-  website: z.string().url().optional().or(z.literal("")).nullable(),
+  website: optionalWebsite,
   location: z.string().max(160).optional().nullable(),
   instagram: z.string().max(80).optional().nullable(),
   linkedin: z.string().max(200).optional().nullable(),
@@ -71,9 +73,14 @@ function nv(v: string | null | undefined) {
   return v && v.length ? v : null;
 }
 
+function emptyToNull(v: string | null | undefined) {
+  const t = v?.trim();
+  return t ? t : null;
+}
+
 export async function updateProfile(input: z.infer<typeof ProfileSchema>): Promise<ActionResult> {
   const parsed = ProfileSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+  if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
   const { profile } = await loadOwnedProfile();
   const newSlug = normalizeSlug(parsed.data.slug);
@@ -98,13 +105,13 @@ export async function updateProfile(input: z.infer<typeof ProfileSchema>): Promi
       whatsapp: nv(d.whatsapp),
       website: nv(d.website),
       location: nv(d.location),
-      instagram: nv(d.instagram),
-      linkedin: nv(d.linkedin),
-      twitter: nv(d.twitter),
-      facebook: nv(d.facebook),
-      youtube: nv(d.youtube),
-      tiktok: nv(d.tiktok),
-      github: nv(d.github),
+      instagram: emptyToNull(d.instagram),
+      linkedin: emptyToNull(d.linkedin),
+      twitter: emptyToNull(d.twitter),
+      facebook: emptyToNull(d.facebook),
+      youtube: emptyToNull(d.youtube),
+      tiktok: emptyToNull(d.tiktok),
+      github: emptyToNull(d.github),
     },
   });
 
@@ -118,13 +125,13 @@ const AppearanceSchema = z.object({
   template: z.enum(["MINIMAL", "PREMIUM", "CORPORATE"]),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   themeMode: z.enum(["LIGHT", "DARK"]).default("LIGHT"),
-  avatarUrl: z.string().url().optional().or(z.literal("")).nullable(),
-  coverUrl: z.string().url().optional().or(z.literal("")).nullable(),
+  avatarUrl: optionalHttpUrl,
+  coverUrl: optionalHttpUrl,
 });
 
 export async function updateAppearance(input: z.infer<typeof AppearanceSchema>): Promise<ActionResult> {
   const parsed = AppearanceSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+  if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
   const { profile } = await loadOwnedProfile();
 
   await prisma.profile.update({
@@ -150,15 +157,16 @@ const LinkSchema = z.object({
 
 export async function createLink(input: z.infer<typeof LinkSchema>): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const parsed = LinkSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+  if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
   const { profile } = await loadOwnedProfile();
+  const url = normalizeLinkUrl(parsed.data.kind as LinkKind, parsed.data.url);
   const last = await prisma.link.findFirst({ where: { profileId: profile.id }, orderBy: { order: "desc" } });
   const created = await prisma.link.create({
     data: {
       profileId: profile.id,
       kind: parsed.data.kind as LinkKind,
-      label: parsed.data.label,
-      url: parsed.data.url,
+      label: parsed.data.label.trim(),
+      url,
       order: (last?.order ?? -1) + 1,
     },
   });
@@ -169,13 +177,14 @@ export async function createLink(input: z.infer<typeof LinkSchema>): Promise<{ o
 
 export async function updateLink(id: string, input: z.infer<typeof LinkSchema>): Promise<ActionResult> {
   const parsed = LinkSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+  if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
   const { profile } = await loadOwnedProfile();
   const link = await prisma.link.findUnique({ where: { id } });
   if (!link || link.profileId !== profile.id) return { ok: false, error: "No encontrado" };
+  const url = normalizeLinkUrl(parsed.data.kind as LinkKind, parsed.data.url);
   await prisma.link.update({
     where: { id },
-    data: { kind: parsed.data.kind as LinkKind, label: parsed.data.label, url: parsed.data.url },
+    data: { kind: parsed.data.kind as LinkKind, label: parsed.data.label.trim(), url },
   });
   revalidatePath(`/${profile.slug}`);
   revalidatePath("/dashboard");
