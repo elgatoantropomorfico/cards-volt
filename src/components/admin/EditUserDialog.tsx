@@ -23,7 +23,7 @@ import { cn, normalizeSlug } from "@/lib/utils";
 import { SOCIALS, normalizeLinkUrl, detectKind } from "@/lib/socials";
 import type { LinkKind, Template, ThemeMode } from "@/lib/profile-types";
 
-type Role = "SUPERADMIN" | "COMPANY_ADMIN" | "USER";
+type Role = "SUPERADMIN" | "USER";
 
 type LinkRow = { id?: string; kind: LinkKind; label: string; url: string };
 
@@ -31,15 +31,11 @@ export function EditUserDialog({
   userId,
   open,
   onOpenChange,
-  isSuperadmin,
-  companies,
   onSaved,
 }: {
   userId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  isSuperadmin: boolean;
-  companies: { id: string; name: string }[];
   onSaved?: () => void;
 }) {
   const [loading, setLoading] = React.useState(false);
@@ -50,7 +46,6 @@ export function EditUserDialog({
     name: "",
     email: "",
     role: "USER" as Role,
-    companyId: "",
     newPassword: "",
   });
 
@@ -92,7 +87,6 @@ export function EditUserDialog({
         name: res.user.name,
         email: res.user.email,
         role: res.user.role,
-        companyId: res.user.companyId ?? "",
         newPassword: "",
       });
       if (res.profile) {
@@ -131,7 +125,6 @@ export function EditUserDialog({
       name: account.name,
       email: account.email,
       role: account.role,
-      companyId: account.companyId || null,
       newPassword: account.newPassword || "",
     });
     setSaving(false);
@@ -219,34 +212,15 @@ export function EditUserDialog({
                   <Field label="Email (login)">
                     <Input type="email" value={account.email} onChange={(e) => setAccount({ ...account, email: e.target.value })} />
                   </Field>
-                  {isSuperadmin && (
-                    <>
-                      <Field label="Rol">
-                        <Select value={account.role} onValueChange={(v) => setAccount({ ...account, role: v as Role })}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="USER">Usuario</SelectItem>
-                            <SelectItem value="COMPANY_ADMIN">Admin de empresa</SelectItem>
-                            <SelectItem value="SUPERADMIN">Superadmin</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </Field>
-                      <Field label="Empresa">
-                        <Select
-                          value={account.companyId || "none"}
-                          onValueChange={(v) => setAccount({ ...account, companyId: v === "none" ? "" : v })}
-                        >
-                          <SelectTrigger><SelectValue placeholder="Sin empresa" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">— Sin empresa —</SelectItem>
-                            {companies.map((c) => (
-                              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </Field>
-                    </>
-                  )}
+                  <Field label="Rol">
+                    <Select value={account.role} onValueChange={(v) => setAccount({ ...account, role: v as Role })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USER">Usuario</SelectItem>
+                        <SelectItem value="SUPERADMIN">Superadmin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
                   <Field label="Nueva contraseña" hint="Dejá vacío para no cambiar. Mínimo 8 caracteres.">
                     <Input
                       type="text"

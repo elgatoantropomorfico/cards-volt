@@ -7,143 +7,11 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { isValidSlug, normalizeSlug } from "@/lib/utils";
-import { normalizeLinkUrl, normalizeWebsite } from "@/lib/socials";
+import { normalizeLinkUrl } from "@/lib/socials";
 import { formatZodError, optionalHttpUrl, optionalWebsite } from "@/lib/validation";
 import type { LinkKind } from "@/lib/profile-types";
 
 export type ActionResult = { ok: true; data?: unknown } | { ok: false; error: string };
-
-// ---------- Companies (SUPERADMIN) ----------
-const CompanySchema = z.object({
-  name: z.string().min(2).max(120),
-  slug: z.string().min(2).max(60),
-  type: z.enum(["INDIVIDUAL", "COMPANY"]).default("COMPANY"),
-  logoUrl: z.string().url().optional().or(z.literal("")).nullable(),
-  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#0F172A"),
-  seatsContracted: z.coerce.number().int().min(1).max(10000).default(1),
-});
-
-export async function createCompany(input: z.infer<typeof CompanySchema>): Promise<ActionResult> {
-  await requireRole("SUPERADMIN");
-  const parsed = CompanySchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
-  const slug = normalizeSlug(parsed.data.slug);
-  if (!isValidSlug(slug)) return { ok: false, error: "Slug de empresa inválido" };
-  const exists = await prisma.company.findUnique({ where: { slug }, select: { id: true } });
-  if (exists) return { ok: false, error: "Slug ya en uso" };
-  const company = await prisma.company.create({
-    data: {
-      name: parsed.data.name,
-      slug,
-      type: parsed.data.type,
-      logoUrl: parsed.data.logoUrl || null,
-      primaryColor: parsed.data.primaryColor,
-      seatsContracted: parsed.data.seatsContracted,
-    },
-  });
-  revalidatePath("/admin");
-  return { ok: true, data: { id: company.id } };
-}
-
-export async function updateCompany(id: string, input: Partial<z.infer<typeof CompanySchema>> & { active?: boolean }): Promise<ActionResult> {
-  await requireRole("SUPERADMIN");
-  const data: Record<string, unknown> = {};
-  if (input.name !== undefined) data.name = input.name;
-  if (input.slug !== undefined) {
-    const slug = normalizeSlug(input.slug);
-    if (!isValidSlug(slug)) return { ok: false, error: "Slug de empresa inválido" };
-    const exists = await prisma.company.findFirst({ where: { slug, NOT: { id } }, select: { id: true } });
-    if (exists) return { ok: false, error: "Slug ya en uso" };
-    data.slug = slug;
-  }
-  if (input.logoUrl !== undefined) data.logoUrl = input.logoUrl || null;
-  if (input.primaryColor !== undefined) data.primaryColor = input.primaryColor;
-  if (input.seatsContracted !== undefined) data.seatsContracted = Number(input.seatsContracted);
-  if (input.active !== undefined) data.active = input.active;
-  if (input.type !== undefined) data.type = input.type;
-  await prisma.company.update({ where: { id }, data });
-  revalidatePath("/admin");
-  revalidatePath("/company");
-  return { ok: true };
-}
-
-export async function deleteCompany(id: string): Promise<ActionResult> {
-  await requireRole("SUPERADMIN");
-  await prisma.company.delete({ where: { id } });
-  revalidatePath("/admin");
-  return { ok: true };
-}
-
-// ---------- Users / Employees (SUPERADMIN or COMPANY_ADMIN of same company) ----------
-const UserSchema = z.object({
-  name: z.string().min(2).max(120),
-  email: z.string().email(),
-  password: z.string().min(8).max(120),
-  role: z.enum(["SUPERADMIN", "COMPANY_ADMIN", "USER"]).default("USER"),
-  companyId: z.string().optional().nullable(),
-  // Auto-create profile fields
-  slug: z.string().optional(),
-  jobTitle: z.string().optional().nullable(),
-});
-
-export async function createUser(input: z.infer<typeof UserSchema>): Promise<ActionResult> {
-  const me = await requireRole("SUPERADMIN", "COMPANY_ADMIN");
-  const parsed = UserSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
-
-  // COMPANY_ADMIN can only create USER in their own company
-  if (me.role === "COMPANY_ADMIN") {
-    if (parsed.data.role !== "USER") return { ok: false, error: "Solo podés crear empleados" };
-    if (!me.companyId) return { ok: false, error: "No tenés empresa asignada" };
-    parsed.data.companyId = me.companyId;
-  }
-
-  // Use Better Auth to create the user (handles password hashing)
-  const signup = await auth.api.signUpEmail({
-    body: {
-      name: parsed.data.name,
-      email: parsed.data.email,
-      password: parsed.data.password,
-    },
-  });
-  const userId = signup?.user?.id;
-  if (!userId) return { ok: false, error: "No se pudo crear el usuario" };
-
-  // Patch role and companyId
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      role: parsed.data.role,
-      companyId: parsed.data.companyId || null,
-      emailVerified: true,
-    },
-  });
-
-  // Create a profile
-  const seed = parsed.data.slug || parsed.data.name;
-  let base = normalizeSlug(seed) || "user";
-  if (base.length < 3) base += "-card";
-  let slug = base;
-  let i = 1;
-  while (await prisma.profile.findUnique({ where: { slug }, select: { id: true } })) {
-    i += 1;
-    slug = `${base}-${i}`;
-  }
-  await prisma.profile.create({
-    data: {
-      userId,
-      companyId: parsed.data.companyId || null,
-      slug,
-      fullName: parsed.data.name,
-      email: parsed.data.email,
-      jobTitle: parsed.data.jobTitle || null,
-    },
-  });
-
-  revalidatePath("/admin");
-  revalidatePath("/company");
-  return { ok: true, data: { id: userId, slug } };
-}
 
 const KIND_VALUES = [
   "WEBSITE","INSTAGRAM","LINKEDIN","TWITTER","FACEBOOK","YOUTUBE","TIKTOK","GITHUB","SPOTIFY","CALENDAR","EMAIL","PHONE","WHATSAPP","MAP","PDF","OTHER",
@@ -172,8 +40,7 @@ const FullUserSchema = z.object({
   name: z.string().min(2).max(120),
   email: z.string().email(),
   password: z.string().min(8).max(120),
-  role: z.enum(["SUPERADMIN", "COMPANY_ADMIN", "USER"]).default("USER"),
-  companyId: z.string().optional().nullable(),
+  role: z.enum(["SUPERADMIN", "USER"]).default("USER"),
   profile: FullProfileSchema,
   links: z.array(z.object({
     kind: z.enum(KIND_VALUES),
@@ -183,16 +50,10 @@ const FullUserSchema = z.object({
 });
 
 export async function createUserFull(input: z.infer<typeof FullUserSchema>): Promise<{ ok: true; slug: string } | { ok: false; error: string }> {
-  const me = await requireRole("SUPERADMIN", "COMPANY_ADMIN");
+  await requireRole("SUPERADMIN");
   const parsed = FullUserSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
   const d = parsed.data;
-
-  if (me.role === "COMPANY_ADMIN") {
-    if (d.role !== "USER") return { ok: false, error: "Solo podés crear empleados" };
-    if (!me.companyId) return { ok: false, error: "No tenés empresa asignada" };
-    d.companyId = me.companyId;
-  }
 
   const slugBase = normalizeSlug(d.profile.slug || d.name);
   if (!isValidSlug(slugBase)) return { ok: false, error: "Slug inválido" };
@@ -211,13 +72,12 @@ export async function createUserFull(input: z.infer<typeof FullUserSchema>): Pro
 
   await prisma.user.update({
     where: { id: userId },
-    data: { role: d.role, companyId: d.companyId || null, emailVerified: true },
+    data: { role: d.role, emailVerified: true },
   });
 
   const created = await prisma.profile.create({
     data: {
       userId,
-      companyId: d.companyId || null,
       slug,
       fullName: d.name,
       email: d.email,
@@ -245,62 +105,48 @@ export async function createUserFull(input: z.infer<typeof FullUserSchema>): Pro
         profileId: created.id,
         kind: l.kind as LinkKind,
         label: l.label,
-        url: l.url,
+        url: normalizeLinkUrl(l.kind as LinkKind, l.url),
         order: idx,
       })),
     });
   }
 
   revalidatePath("/admin");
-  revalidatePath("/company");
   return { ok: true, slug };
 }
 
 export async function setProfileActive(profileId: string, active: boolean): Promise<ActionResult> {
-  const me = await requireRole("SUPERADMIN", "COMPANY_ADMIN");
-  const profile = await prisma.profile.findUnique({ where: { id: profileId }, include: { user: true } });
+  await requireRole("SUPERADMIN");
+  const profile = await prisma.profile.findUnique({ where: { id: profileId } });
   if (!profile) return { ok: false, error: "No existe" };
-  if (me.role === "COMPANY_ADMIN" && profile.companyId !== me.companyId) {
-    return { ok: false, error: "Sin permiso" };
-  }
   await prisma.profile.update({ where: { id: profileId }, data: { active } });
   revalidatePath("/admin");
-  revalidatePath("/company");
   revalidatePath(`/${profile.slug}`);
   return { ok: true };
 }
 
 export async function deleteUser(userId: string): Promise<ActionResult> {
-  const me = await requireRole("SUPERADMIN", "COMPANY_ADMIN");
+  await requireRole("SUPERADMIN");
   const target = await prisma.user.findUnique({ where: { id: userId } });
   if (!target) return { ok: false, error: "No existe" };
-  if (me.role === "COMPANY_ADMIN") {
-    if (target.companyId !== me.companyId || target.role !== "USER") {
-      return { ok: false, error: "Sin permiso" };
-    }
-  }
+  if (target.role === "SUPERADMIN") return { ok: false, error: "No podés eliminar un superadmin" };
   await prisma.user.delete({ where: { id: userId } });
   revalidatePath("/admin");
-  revalidatePath("/company");
   return { ok: true };
 }
 
-async function assertCanManageUser(me: Awaited<ReturnType<typeof requireRole>>, targetUserId: string) {
+async function loadUserForAdmin(userId: string) {
   const target = await prisma.user.findUnique({
-    where: { id: targetUserId },
+    where: { id: userId },
     include: { profile: true },
   });
   if (!target) return { ok: false as const, error: "Usuario no encontrado" };
-  if (me.role === "COMPANY_ADMIN") {
-    if (target.companyId !== me.companyId) return { ok: false as const, error: "Sin permiso" };
-    if (target.role !== "USER" && target.id !== me.id) return { ok: false as const, error: "Solo podés editar empleados" };
-  }
   return { ok: true as const, target };
 }
 
 export async function getUserAdminDetail(userId: string) {
-  const me = await requireRole("SUPERADMIN", "COMPANY_ADMIN");
-  const check = await assertCanManageUser(me, userId);
+  await requireRole("SUPERADMIN");
+  const check = await loadUserForAdmin(userId);
   if (!check.ok) return check;
 
   const { target } = check;
@@ -318,7 +164,6 @@ export async function getUserAdminDetail(userId: string) {
       name: target.name,
       email: target.email,
       role: target.role,
-      companyId: target.companyId,
     },
     profile: profile
       ? {
@@ -361,28 +206,17 @@ const AdminUserUpdateSchema = z.object({
   userId: z.string(),
   name: z.string().min(2).max(120),
   email: z.string().email(),
-  role: z.enum(["SUPERADMIN", "COMPANY_ADMIN", "USER"]),
-  companyId: z.string().nullable().optional(),
+  role: z.enum(["SUPERADMIN", "USER"]),
   newPassword: z.string().min(8).max(120).optional().or(z.literal("")),
 });
 
 export async function updateUserAdmin(input: z.infer<typeof AdminUserUpdateSchema>): Promise<ActionResult> {
-  const me = await requireRole("SUPERADMIN", "COMPANY_ADMIN");
+  await requireRole("SUPERADMIN");
   const parsed = AdminUserUpdateSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
-  const check = await assertCanManageUser(me, parsed.data.userId);
+  const check = await loadUserForAdmin(parsed.data.userId);
   if (!check.ok) return check;
-
-  let { role, companyId } = parsed.data;
-  if (me.role === "COMPANY_ADMIN") {
-    role = "USER";
-    companyId = me.companyId;
-  }
-
-  if (role !== "SUPERADMIN" && me.role === "SUPERADMIN" && role === "COMPANY_ADMIN" && !companyId) {
-    return { ok: false, error: "Un admin de empresa debe tener empresa asignada" };
-  }
 
   const emailTaken = await prisma.user.findFirst({
     where: { email: parsed.data.email, NOT: { id: parsed.data.userId } },
@@ -398,8 +232,7 @@ export async function updateUserAdmin(input: z.infer<typeof AdminUserUpdateSchem
       data: {
         name: parsed.data.name,
         email: parsed.data.email,
-        role,
-        companyId: role === "SUPERADMIN" ? null : companyId || null,
+        role: parsed.data.role,
       },
     });
 
@@ -414,7 +247,6 @@ export async function updateUserAdmin(input: z.infer<typeof AdminUserUpdateSchem
         data: {
           fullName: parsed.data.name,
           email: parsed.data.email,
-          companyId: role === "SUPERADMIN" ? null : companyId || null,
         },
       });
     }
@@ -429,7 +261,6 @@ export async function updateUserAdmin(input: z.infer<typeof AdminUserUpdateSchem
   });
 
   revalidatePath("/admin");
-  revalidatePath("/company");
   if (oldSlug) revalidatePath(`/${oldSlug}`);
   return { ok: true };
 }
@@ -440,11 +271,11 @@ const AdminProfileUpdateSchema = FullProfileSchema.extend({
 });
 
 export async function updateUserProfileAdmin(input: z.infer<typeof AdminProfileUpdateSchema>): Promise<ActionResult> {
-  const me = await requireRole("SUPERADMIN", "COMPANY_ADMIN");
+  await requireRole("SUPERADMIN");
   const parsed = AdminProfileUpdateSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
 
-  const check = await assertCanManageUser(me, parsed.data.userId);
+  const check = await loadUserForAdmin(parsed.data.userId);
   if (!check.ok) return check;
   if (!check.target.profile) return { ok: false, error: "El usuario no tiene perfil" };
 
@@ -487,7 +318,6 @@ export async function updateUserProfileAdmin(input: z.infer<typeof AdminProfileU
   });
 
   revalidatePath("/admin");
-  revalidatePath("/company");
   revalidatePath(`/${slugBase}`);
   if (slugBase !== current.slug) revalidatePath(`/${current.slug}`);
   return { ok: true };
@@ -497,8 +327,8 @@ export async function replaceUserLinksAdmin(
   userId: string,
   links: { kind: z.infer<typeof FullUserSchema>["links"][number]["kind"]; label: string; url: string }[],
 ): Promise<ActionResult> {
-  const me = await requireRole("SUPERADMIN", "COMPANY_ADMIN");
-  const check = await assertCanManageUser(me, userId);
+  await requireRole("SUPERADMIN");
+  const check = await loadUserForAdmin(userId);
   if (!check.ok) return check;
   if (!check.target.profile) return { ok: false, error: "El usuario no tiene perfil" };
 
@@ -521,7 +351,6 @@ export async function replaceUserLinksAdmin(
   ]);
 
   revalidatePath("/admin");
-  revalidatePath("/company");
   if (check.target.profile.slug) revalidatePath(`/${check.target.profile.slug}`);
   return { ok: true };
 }
@@ -529,38 +358,28 @@ export async function replaceUserLinksAdmin(
 // ---------- NFC Cards ----------
 const CardSchema = z.object({
   code: z.string().min(3).max(64),
-  companyId: z.string().optional().nullable(),
 });
 
 export async function createCard(input: z.infer<typeof CardSchema>): Promise<ActionResult> {
-  const me = await requireRole("SUPERADMIN", "COMPANY_ADMIN");
+  await requireRole("SUPERADMIN");
   const parsed = CardSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: formatZodError(parsed.error) };
-  const companyId = me.role === "COMPANY_ADMIN" ? me.companyId : parsed.data.companyId || null;
   const exists = await prisma.nfcCard.findUnique({ where: { code: parsed.data.code } });
   if (exists) return { ok: false, error: "Código ya existe" };
   await prisma.nfcCard.create({
-    data: { code: parsed.data.code, companyId, status: "UNASSIGNED" },
+    data: { code: parsed.data.code, status: "UNASSIGNED" },
   });
   revalidatePath("/admin");
-  revalidatePath("/company");
   return { ok: true };
 }
 
 export async function assignCard(cardId: string, profileId: string | null): Promise<ActionResult> {
-  const me = await requireRole("SUPERADMIN", "COMPANY_ADMIN");
+  await requireRole("SUPERADMIN");
   const card = await prisma.nfcCard.findUnique({ where: { id: cardId } });
   if (!card) return { ok: false, error: "Tarjeta inexistente" };
-  if (me.role === "COMPANY_ADMIN" && card.companyId !== me.companyId) {
-    return { ok: false, error: "Sin permiso" };
-  }
   if (profileId) {
     const profile = await prisma.profile.findUnique({ where: { id: profileId } });
     if (!profile) return { ok: false, error: "Perfil inexistente" };
-    if (me.role === "COMPANY_ADMIN" && profile.companyId !== me.companyId) {
-      return { ok: false, error: "Sin permiso" };
-    }
-    // Clear any other card pointing to this profile
     await prisma.nfcCard.updateMany({ where: { profileId }, data: { profileId: null, status: "UNASSIGNED", assignedAt: null } });
     await prisma.nfcCard.update({
       where: { id: cardId },
@@ -573,19 +392,14 @@ export async function assignCard(cardId: string, profileId: string | null): Prom
     });
   }
   revalidatePath("/admin");
-  revalidatePath("/company");
   return { ok: true };
 }
 
 export async function setCardStatus(cardId: string, status: "ACTIVE" | "INACTIVE" | "LOST" | "UNASSIGNED"): Promise<ActionResult> {
-  const me = await requireRole("SUPERADMIN", "COMPANY_ADMIN");
+  await requireRole("SUPERADMIN");
   const card = await prisma.nfcCard.findUnique({ where: { id: cardId } });
   if (!card) return { ok: false, error: "Tarjeta inexistente" };
-  if (me.role === "COMPANY_ADMIN" && card.companyId !== me.companyId) {
-    return { ok: false, error: "Sin permiso" };
-  }
   await prisma.nfcCard.update({ where: { id: cardId }, data: { status } });
   revalidatePath("/admin");
-  revalidatePath("/company");
   return { ok: true };
 }

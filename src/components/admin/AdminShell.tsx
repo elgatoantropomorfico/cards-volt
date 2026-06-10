@@ -4,42 +4,39 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Building2, Users, CreditCard, LogOut, ArrowLeft } from "lucide-react";
+import { Users, CreditCard, LogOut, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogoutButton } from "@/components/dashboard/LogoutButton";
-import { CompaniesManager } from "@/components/admin/CompaniesManager";
 import { UsersManager } from "@/components/admin/UsersManager";
 import { CardsManager } from "@/components/admin/CardsManager";
 import { cn } from "@/lib/utils";
 
-type Section = "companies" | "users" | "cards";
+type Section = "users" | "cards";
 
 const NAV: { id: Section; label: string; icon: React.ReactNode }[] = [
-  { id: "companies", label: "Empresas", icon: <Building2 className="h-4 w-4" /> },
   { id: "users", label: "Usuarios", icon: <Users className="h-4 w-4" /> },
   { id: "cards", label: "Tarjetas NFC", icon: <CreditCard className="h-4 w-4" /> },
 ];
 
 export function AdminShell({
   userEmail,
-  companies,
   users,
   cards,
   profiles,
 }: {
   userEmail: string;
-  companies: Parameters<typeof CompaniesManager>[0]["companies"];
   users: Parameters<typeof UsersManager>[0]["users"];
   cards: Parameters<typeof CardsManager>[0]["cards"];
   profiles: Parameters<typeof CardsManager>[0]["profiles"];
 }) {
   const router = useRouter();
   const [section, setSection] = React.useState<Section>(() => {
-    if (typeof window === "undefined") return "companies";
-    const h = window.location.hash.replace("#", "") as Section;
-    return (["companies", "users", "cards"] as Section[]).includes(h) ? h : "companies";
+    if (typeof window === "undefined") return "users";
+    const h = window.location.hash.replace("#", "");
+    if (h === "companies") return "users";
+    return (["users", "cards"] as Section[]).includes(h as Section) ? (h as Section) : "users";
   });
 
   React.useEffect(() => {
@@ -48,8 +45,6 @@ export function AdminShell({
     url.hash = section;
     window.history.replaceState(null, "", url.toString());
   }, [section]);
-
-  const companyOptions = companies.map((c) => ({ id: c.id, name: c.name }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -79,8 +74,7 @@ export function AdminShell({
       </header>
 
       <div className="container py-6">
-        <div className="mb-6 grid gap-4 sm:grid-cols-3">
-          <StatCard label="Empresas" value={companies.length} icon={<Building2 className="h-4 w-4" />} />
+        <div className="mb-6 grid gap-4 sm:grid-cols-2">
           <StatCard label="Usuarios" value={users.length} icon={<Users className="h-4 w-4" />} />
           <StatCard label="Tarjetas NFC" value={cards.length} icon={<CreditCard className="h-4 w-4" />} />
         </div>
@@ -122,36 +116,14 @@ export function AdminShell({
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           >
-            {section === "companies" && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Empresas</CardTitle>
-                      <CardDescription>Crear, editar y administrar empresas e individuales.</CardDescription>
-                    </div>
-                    <Badge variant="outline">{companies.length}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <CompaniesManager companies={companies} onChanged={() => router.refresh()} />
-                </CardContent>
-              </Card>
-            )}
-
             {section === "users" && (
               <Card>
                 <CardHeader>
                   <CardTitle>Usuarios</CardTitle>
-                  <CardDescription>Crear usuarios con el asistente completo, asignar empresa y rol.</CardDescription>
+                  <CardDescription>Crear usuarios con el asistente completo y gestionar cuentas, perfiles y enlaces.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <UsersManager
-                    isSuperadmin
-                    companies={companyOptions}
-                    users={users}
-                    onChanged={() => router.refresh()}
-                  />
+                  <UsersManager users={users} onChanged={() => router.refresh()} />
                 </CardContent>
               </Card>
             )}
@@ -163,13 +135,7 @@ export function AdminShell({
                   <CardDescription>Códigos internos, asignación a perfiles y estados.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <CardsManager
-                    isSuperadmin
-                    companies={companyOptions}
-                    profiles={profiles}
-                    cards={cards}
-                    onChanged={() => router.refresh()}
-                  />
+                  <CardsManager profiles={profiles} cards={cards} onChanged={() => router.refresh()} />
                 </CardContent>
               </Card>
             )}

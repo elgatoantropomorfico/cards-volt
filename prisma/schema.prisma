@@ -16,10 +16,6 @@ model User {
   emailVerified Boolean  @default(false)
   image         String?
   role          Role     @default(USER)
-  // Tenant linkage
-  companyId     String?
-  company       Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  // One profile per user (1-1). Company can have many users (each user = 1 profile).
   profile       Profile?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -27,7 +23,6 @@ model User {
   sessions      Session[]
   accounts      Account[]
 
-  @@index([companyId])
   @@map("users")
 }
 
@@ -81,33 +76,7 @@ model Verification {
 
 enum Role {
   SUPERADMIN
-  COMPANY_ADMIN
   USER
-}
-
-// ---------- TENANCY ----------
-enum CompanyType {
-  INDIVIDUAL
-  COMPANY
-}
-
-model Company {
-  id              String      @id @default(cuid())
-  name            String
-  slug            String      @unique
-  type            CompanyType @default(COMPANY)
-  logoUrl         String?
-  primaryColor    String      @default("#0F172A")
-  active          Boolean     @default(true)
-  seatsContracted Int         @default(1)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-
-  users    User[]
-  profiles Profile[]
-  cards    NfcCard[]
-
-  @@map("companies")
 }
 
 // ---------- PROFILE (public card content) ----------
@@ -146,13 +115,9 @@ model Profile {
   slug         String   @unique
   active       Boolean  @default(true)
 
-  // Owner & tenant
   userId       String   @unique
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  companyId    String?
-  company      Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
-  // Public data
   fullName     String
   jobTitle     String?
   companyName  String?
@@ -167,7 +132,6 @@ model Profile {
   locationLat  Float?
   locationLng  Float?
 
-  // Social handles (denormalized for speed)
   instagram    String?
   linkedin     String?
   twitter      String?
@@ -176,7 +140,6 @@ model Profile {
   tiktok       String?
   github       String?
 
-  // Theming
   template     Template @default(MINIMAL)
   primaryColor String   @default("#0F172A")
   themeMode    ThemeMode @default(LIGHT)
@@ -187,7 +150,6 @@ model Profile {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  @@index([companyId])
   @@map("profiles")
 }
 
@@ -217,16 +179,13 @@ enum CardStatus {
 
 model NfcCard {
   id           String     @id @default(cuid())
-  code         String     @unique // internal code printed/engraved
+  code         String     @unique
   status       CardStatus @default(UNASSIGNED)
-  companyId    String?
-  company      Company?   @relation(fields: [companyId], references: [id], onDelete: SetNull)
   profileId    String?    @unique
   profile      Profile?   @relation(fields: [profileId], references: [id], onDelete: SetNull)
   assignedAt   DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
-  @@index([companyId])
   @@map("nfc_cards")
 }

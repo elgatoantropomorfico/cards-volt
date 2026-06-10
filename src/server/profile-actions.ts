@@ -42,7 +42,6 @@ async function loadOwnedProfile() {
     const profile = await prisma.profile.create({
       data: {
         userId: user.id,
-        companyId: user.companyId,
         slug,
         fullName: user.name || user.email,
         email: user.email,

@@ -12,7 +12,7 @@ type Props = { params: Promise<{ slug: string }> };
 async function loadProfile(slug: string) {
   return prisma.profile.findUnique({
     where: { slug },
-    include: { links: { orderBy: { order: "asc" } }, company: true },
+    include: { links: { orderBy: { order: "asc" } } },
   });
 }
 

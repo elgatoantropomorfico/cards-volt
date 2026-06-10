@@ -5,7 +5,6 @@ import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toaster";
@@ -15,40 +14,27 @@ type CardRow = {
   id: string;
   code: string;
   status: "UNASSIGNED" | "ACTIVE" | "INACTIVE" | "LOST";
-  companyId: string | null;
-  companyName: string | null;
   profileId: string | null;
   profileLabel: string | null;
   createdAt: string;
   assignedAt: string | null;
 };
 
-type ProfileOpt = { id: string; label: string; companyId: string | null };
+type ProfileOpt = { id: string; label: string };
 
 export function CardsManager({
   cards,
-  companies,
   profiles,
-  isSuperadmin,
-  lockedCompanyId,
   onChanged,
 }: {
   cards: CardRow[];
-  companies: { id: string; name: string }[];
   profiles: ProfileOpt[];
-  isSuperadmin: boolean;
-  lockedCompanyId?: string;
   onChanged?: () => void;
 }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <NewCardDialog
-          isSuperadmin={isSuperadmin}
-          companies={companies}
-          lockedCompanyId={lockedCompanyId}
-          onCreated={onChanged}
-        />
+        <NewCardDialog onCreated={onChanged} />
       </div>
       <div className="overflow-hidden rounded-2xl border bg-card shadow-soft">
         <table className="min-w-full text-sm">
@@ -56,7 +42,6 @@ export function CardsManager({
             <tr>
               <th className="px-4 py-2">Código</th>
               <th className="px-4 py-2">Estado</th>
-              <th className="px-4 py-2">Empresa</th>
               <th className="px-4 py-2">Perfil asignado</th>
               <th className="px-4 py-2">Creada</th>
               <th className="px-4 py-2">Asignada</th>
@@ -65,7 +50,7 @@ export function CardsManager({
           </thead>
           <tbody>
             {cards.map((c) => <Row key={c.id} c={c} profiles={profiles} onChanged={onChanged} />)}
-            {!cards.length && <tr><td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">No hay tarjetas</td></tr>}
+            {!cards.length && <tr><td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">No hay tarjetas</td></tr>}
           </tbody>
         </table>
       </div>
@@ -74,7 +59,6 @@ export function CardsManager({
 }
 
 function Row({ c, profiles, onChanged }: { c: CardRow; profiles: ProfileOpt[]; onChanged?: () => void }) {
-  const eligibleProfiles = profiles.filter((p) => !c.companyId || p.companyId === c.companyId);
   async function onAssign(v: string) {
     const pid = v === "none" ? null : v;
     const res = await assignCard(c.id, pid);
@@ -101,13 +85,12 @@ function Row({ c, profiles, onChanged }: { c: CardRow; profiles: ProfileOpt[]; o
           </SelectContent>
         </Select>
       </td>
-      <td className="px-4 py-3">{c.companyName || "—"}</td>
       <td className="px-4 py-3">
         <Select value={c.profileId || "none"} onValueChange={onAssign}>
           <SelectTrigger className="h-8 w-[260px]"><SelectValue placeholder="—" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="none">— Sin asignar —</SelectItem>
-            {eligibleProfiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>)}
+            {profiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>)}
           </SelectContent>
         </Select>
       </td>
@@ -118,26 +101,15 @@ function Row({ c, profiles, onChanged }: { c: CardRow; profiles: ProfileOpt[]; o
   );
 }
 
-function NewCardDialog({
-  isSuperadmin,
-  companies,
-  lockedCompanyId,
-  onCreated,
-}: {
-  isSuperadmin: boolean;
-  companies: { id: string; name: string }[];
-  lockedCompanyId?: string;
-  onCreated?: () => void;
-}) {
+function NewCardDialog({ onCreated }: { onCreated?: () => void }) {
   const [open, setOpen] = React.useState(false);
   const [pending, setPending] = React.useState(false);
   const [code, setCode] = React.useState("");
-  const [companyId, setCompanyId] = React.useState(lockedCompanyId ?? "");
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setPending(true);
-    const res = await createCard({ code, companyId: companyId || null });
+    const res = await createCard({ code });
     setPending(false);
     if (!res.ok) return toast({ title: "Error", description: res.error, variant: "error" });
     setOpen(false);
@@ -166,18 +138,6 @@ function NewCardDialog({
               </Button>
             </div>
           </div>
-          {isSuperadmin && (
-            <div className="space-y-2">
-              <Label>Empresa (opcional)</Label>
-              <Select value={companyId || "none"} onValueChange={(v) => setCompanyId(v === "none" ? "" : v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">— Sin empresa —</SelectItem>
-                  {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Crear
           </Button>

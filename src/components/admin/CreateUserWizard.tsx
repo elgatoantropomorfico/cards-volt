@@ -16,7 +16,7 @@ import { cn, normalizeSlug } from "@/lib/utils";
 import { SOCIALS, normalizeLinkUrl, detectKind } from "@/lib/socials";
 import type { LinkKind, Template, ThemeMode } from "@/lib/profile-types";
 
-type Role = "SUPERADMIN" | "COMPANY_ADMIN" | "USER";
+type Role = "SUPERADMIN" | "USER";
 
 const STEPS = [
   { id: "account", label: "Cuenta", icon: <Shield className="h-3.5 w-3.5" /> },
@@ -31,19 +31,9 @@ type Step = typeof STEPS[number]["id"];
 const PRESETS = ["#0F172A", "#7C3AED", "#2563EB", "#10B981", "#F59E0B", "#EC4899", "#06B6D4", "#E11D48"];
 
 export function CreateUserWizard({
-  isSuperadmin,
-  companies,
-  lockedCompanyId,
-  defaultCompanyId,
-  defaultRole,
   trigger,
   onCreated,
 }: {
-  isSuperadmin: boolean;
-  companies: { id: string; name: string }[];
-  lockedCompanyId?: string;
-  defaultCompanyId?: string;
-  defaultRole?: Role;
   trigger?: React.ReactNode;
   onCreated?: () => void;
 }) {
@@ -56,8 +46,7 @@ export function CreateUserWizard({
     name: "",
     email: "",
     password: "",
-    role: (isSuperadmin ? "USER" : "USER") as Role,
-    companyId: lockedCompanyId ?? "",
+    role: "USER" as Role,
     slug: "",
     jobTitle: "",
     companyName: "",
@@ -82,8 +71,7 @@ export function CreateUserWizard({
       name: "",
       email: "",
       password: "",
-      role: defaultRole ?? "USER",
-      companyId: lockedCompanyId ?? defaultCompanyId ?? "",
+      role: "USER",
       slug: "",
       jobTitle: "",
       companyName: "",
@@ -147,7 +135,6 @@ export function CreateUserWizard({
       email: data.email,
       password: data.password,
       role: data.role,
-      companyId: data.companyId || null,
       profile: {
         slug: normalizeSlug(data.slug || data.name),
         jobTitle: data.jobTitle || null,
@@ -266,34 +253,15 @@ export function CreateUserWizard({
                         <Field label="Contraseña inicial *">
                           <Input type="text" value={data.password} onChange={(e) => setData({ ...data, password: e.target.value })} placeholder="mín. 8 caracteres" />
                         </Field>
-                        {isSuperadmin && (
-                          <Field label="Rol">
-                            <Select value={data.role} onValueChange={(v) => setData({ ...data, role: v as Role })}>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="USER">Usuario</SelectItem>
-                                <SelectItem value="COMPANY_ADMIN">Admin de empresa</SelectItem>
-                                <SelectItem value="SUPERADMIN">Superadmin</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </Field>
-                        )}
-                        {isSuperadmin && (
-                          <Field label="Empresa">
-                            <Select
-                              value={data.companyId || "none"}
-                              onValueChange={(v) => setData({ ...data, companyId: v === "none" ? "" : v })}
-                            >
-                              <SelectTrigger><SelectValue placeholder="Sin empresa" /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">— Sin empresa —</SelectItem>
-                                {companies.map((c) => (
-                                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </Field>
-                        )}
+                        <Field label="Rol">
+                          <Select value={data.role} onValueChange={(v) => setData({ ...data, role: v as Role })}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="USER">Usuario</SelectItem>
+                              <SelectItem value="SUPERADMIN">Superadmin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </Field>
                       </div>
                     </div>
                   )}

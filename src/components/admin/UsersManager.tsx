@@ -16,23 +16,15 @@ type Row = {
   id: string;
   name: string;
   email: string;
-  role: "SUPERADMIN" | "COMPANY_ADMIN" | "USER";
-  companyId: string | null;
-  companyName: string | null;
+  role: "SUPERADMIN" | "USER";
   profile: { id: string; slug: string; active: boolean } | null;
 };
 
 export function UsersManager({
   users,
-  companies,
-  isSuperadmin,
-  lockedCompanyId,
   onChanged,
 }: {
   users: Row[];
-  companies: { id: string; name: string }[];
-  isSuperadmin: boolean;
-  lockedCompanyId?: string;
   onChanged?: () => void;
 }) {
   const router = useRouter();
@@ -46,9 +38,6 @@ export function UsersManager({
           Creá usuarios con el asistente o editá cuenta, contraseña, perfil y enlaces desde el lápiz.
         </p>
         <CreateUserWizard
-          isSuperadmin={isSuperadmin}
-          companies={companies}
-          lockedCompanyId={lockedCompanyId}
           onCreated={refresh}
           trigger={
             <Button variant="gradient" size="lg">
@@ -64,7 +53,6 @@ export function UsersManager({
               <th className="px-4 py-3">Nombre</th>
               <th className="px-4 py-3">Email</th>
               <th className="px-4 py-3">Rol</th>
-              <th className="px-4 py-3">Empresa</th>
               <th className="px-4 py-3">Slug</th>
               <th className="px-4 py-3">Perfil</th>
               <th className="px-4 py-3"></th>
@@ -74,7 +62,7 @@ export function UsersManager({
             {users.map((u) => (
               <UserRow key={u.id} u={u} onChanged={refresh} onEdit={() => setEditUserId(u.id)} />
             ))}
-            {!users.length && <tr><td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">No hay usuarios</td></tr>}
+            {!users.length && <tr><td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">No hay usuarios</td></tr>}
           </tbody>
         </table>
       </div>
@@ -83,8 +71,6 @@ export function UsersManager({
         userId={editUserId}
         open={!!editUserId}
         onOpenChange={(open) => !open && setEditUserId(null)}
-        isSuperadmin={isSuperadmin}
-        companies={companies}
         onSaved={refresh}
       />
     </div>
@@ -121,7 +107,6 @@ function UserRow({
       <td className="px-4 py-3 font-medium">{u.name}</td>
       <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
       <td className="px-4 py-3"><Badge variant="outline">{u.role}</Badge></td>
-      <td className="px-4 py-3">{u.companyName || "—"}</td>
       <td className="px-4 py-3">
         {u.profile ? (
           <Link href={`/${u.profile.slug}`} target="_blank" className="inline-flex items-center gap-1 hover:underline">

@@ -40,10 +40,7 @@ function LoginForm() {
     let target = next;
     try {
       const me = await fetch("/api/me", { cache: "no-store" }).then((r) => r.json());
-      if (next === "/dashboard") {
-        if (me.role === "SUPERADMIN") target = "/admin";
-        else if (me.role === "COMPANY_ADMIN") target = "/company";
-      }
+      if (next === "/dashboard" && me.role === "SUPERADMIN") target = "/admin";
     } catch {}
     setLoading(false);
     window.location.assign(target);
@@ -93,7 +90,7 @@ function LoginForm() {
             </form>
 
             <p className="mt-6 text-center text-[12.5px] text-muted-foreground">
-              ¿No tenés cuenta? Pedile acceso a tu admin de empresa.
+              ¿No tenés cuenta? Pedile acceso al administrador de Volt Cards.
             </p>
           </div>
         </div>

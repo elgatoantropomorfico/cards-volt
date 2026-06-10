@@ -10,7 +10,6 @@ import {
   QrCode,
   LogOut,
   Shield,
-  Building2,
   ExternalLink,
   Eye,
   EyeOff,
@@ -42,7 +41,7 @@ export function DashboardShell({
   appHost,
   appBaseUrl,
 }: {
-  user: { email: string; name: string; role: "SUPERADMIN" | "COMPANY_ADMIN" | "USER" };
+  user: { email: string; name: string; role: "SUPERADMIN" | "USER" };
   profile: ProfileView;
   links: ProfileLink[];
   appHost: string;
@@ -91,11 +90,6 @@ export function DashboardShell({
             {user.role === "SUPERADMIN" && (
               <Link href="/admin">
                 <Button variant="soft" size="sm"><Shield className="h-3.5 w-3.5" /> Admin</Button>
-              </Link>
-            )}
-            {user.role === "COMPANY_ADMIN" && (
-              <Link href="/company">
-                <Button variant="soft" size="sm"><Building2 className="h-3.5 w-3.5" /> Empresa</Button>
               </Link>
             )}
             <span className="hidden text-xs text-muted-foreground md:inline">{user.email}</span>

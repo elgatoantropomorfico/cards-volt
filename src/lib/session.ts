@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "./auth";
 import { prisma } from "./prisma";
 
-export type Role = "SUPERADMIN" | "COMPANY_ADMIN" | "USER";
+export type Role = "SUPERADMIN" | "USER";
 
 export async function getSession() {
   return auth.api.getSession({ headers: await headers() });
@@ -14,7 +14,7 @@ export async function getCurrentUser() {
   if (!session?.user) return null;
   return prisma.user.findUnique({
     where: { id: session.user.id },
-    include: { company: true, profile: true },
+    include: { profile: true },
   });
 }
 

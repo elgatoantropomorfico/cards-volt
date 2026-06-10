@@ -9,7 +9,6 @@ export function middleware(req: NextRequest) {
 
   const isProtected =
     pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/company") ||
     pathname.startsWith("/admin");
 
   if (isProtected && !sessionCookie) {
@@ -23,5 +22,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/company/:path*", "/admin/:path*"],
+  matcher: ["/dashboard/:path*", "/admin/:path*"],
 };
