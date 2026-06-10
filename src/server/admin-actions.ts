@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { isValidSlug, normalizeSlug } from "@/lib/utils";
+import type { LinkKind } from "@/lib/profile-types";
 
 export type ActionResult = { ok: true; data?: unknown } | { ok: false; error: string };
 
@@ -131,6 +132,117 @@ export async function createUser(input: z.infer<typeof UserSchema>): Promise<Act
   revalidatePath("/admin");
   revalidatePath("/company");
   return { ok: true, data: { id: userId, slug } };
+}
+
+const KIND_VALUES = [
+  "WEBSITE","INSTAGRAM","LINKEDIN","TWITTER","FACEBOOK","YOUTUBE","TIKTOK","GITHUB","SPOTIFY","CALENDAR","EMAIL","PHONE","WHATSAPP","MAP","PDF","OTHER",
+] as const;
+
+const FullProfileSchema = z.object({
+  slug: z.string().min(3).max(40),
+  jobTitle: z.string().optional().nullable(),
+  companyName: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  whatsapp: z.string().optional().nullable(),
+  website: z.string().optional().nullable(),
+  location: z.string().optional().nullable(),
+  instagram: z.string().optional().nullable(),
+  linkedin: z.string().optional().nullable(),
+  twitter: z.string().optional().nullable(),
+  avatarUrl: z.string().url().optional().or(z.literal("")).nullable(),
+  coverUrl: z.string().url().optional().or(z.literal("")).nullable(),
+  template: z.enum(["MINIMAL", "PREMIUM", "CORPORATE"]).default("MINIMAL"),
+  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#7C3AED"),
+  themeMode: z.enum(["LIGHT", "DARK"]).default("LIGHT"),
+});
+
+const FullUserSchema = z.object({
+  name: z.string().min(2).max(120),
+  email: z.string().email(),
+  password: z.string().min(8).max(120),
+  role: z.enum(["SUPERADMIN", "COMPANY_ADMIN", "USER"]).default("USER"),
+  companyId: z.string().optional().nullable(),
+  profile: FullProfileSchema,
+  links: z.array(z.object({
+    kind: z.enum(KIND_VALUES),
+    label: z.string().min(1).max(60),
+    url: z.string().min(1).max(2000),
+  })).default([]),
+});
+
+export async function createUserFull(input: z.infer<typeof FullUserSchema>): Promise<{ ok: true; slug: string } | { ok: false; error: string }> {
+  const me = await requireRole("SUPERADMIN", "COMPANY_ADMIN");
+  const parsed = FullUserSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
+  const d = parsed.data;
+
+  if (me.role === "COMPANY_ADMIN") {
+    if (d.role !== "USER") return { ok: false, error: "Solo podés crear empleados" };
+    if (!me.companyId) return { ok: false, error: "No tenés empresa asignada" };
+    d.companyId = me.companyId;
+  }
+
+  const slugBase = normalizeSlug(d.profile.slug || d.name);
+  if (!isValidSlug(slugBase)) return { ok: false, error: "Slug inválido" };
+  let slug = slugBase;
+  let i = 1;
+  while (await prisma.profile.findUnique({ where: { slug }, select: { id: true } })) {
+    i += 1;
+    slug = `${slugBase}-${i}`;
+  }
+
+  const signup = await auth.api.signUpEmail({
+    body: { name: d.name, email: d.email, password: d.password },
+  });
+  const userId = signup?.user?.id;
+  if (!userId) return { ok: false, error: "No se pudo crear el usuario" };
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { role: d.role, companyId: d.companyId || null, emailVerified: true },
+  });
+
+  const created = await prisma.profile.create({
+    data: {
+      userId,
+      companyId: d.companyId || null,
+      slug,
+      fullName: d.name,
+      email: d.email,
+      jobTitle: d.profile.jobTitle || null,
+      companyName: d.profile.companyName || null,
+      description: d.profile.description || null,
+      phone: d.profile.phone || null,
+      whatsapp: d.profile.whatsapp || null,
+      website: d.profile.website || null,
+      location: d.profile.location || null,
+      instagram: d.profile.instagram || null,
+      linkedin: d.profile.linkedin || null,
+      twitter: d.profile.twitter || null,
+      avatarUrl: d.profile.avatarUrl || null,
+      coverUrl: d.profile.coverUrl || null,
+      template: d.profile.template,
+      primaryColor: d.profile.primaryColor,
+      themeMode: d.profile.themeMode,
+    },
+  });
+
+  if (d.links.length) {
+    await prisma.link.createMany({
+      data: d.links.map((l, idx) => ({
+        profileId: created.id,
+        kind: l.kind as LinkKind,
+        label: l.label,
+        url: l.url,
+        order: idx,
+      })),
+    });
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/company");
+  return { ok: true, slug };
 }
 
 export async function setProfileActive(profileId: string, active: boolean): Promise<ActionResult> {

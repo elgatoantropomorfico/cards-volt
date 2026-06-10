@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { MinimalTemplate } from "@/components/templates/MinimalTemplate";
-import { PremiumTemplate } from "@/components/templates/PremiumTemplate";
-import { CorporateTemplate } from "@/components/templates/CorporateTemplate";
+import { ProfileRenderer } from "@/components/templates/ProfileRenderer";
 import { InactiveProfile } from "@/components/templates/InactiveProfile";
+import { profileToView, linksToView } from "@/server/profile-shape";
 
 export const revalidate = 30;
 
@@ -38,14 +37,5 @@ export default async function PublicProfilePage({ params }: Props) {
   if (!profile) notFound();
   if (!profile.active) return <InactiveProfile name={profile.fullName} />;
 
-  const props = { profile, links: profile.links };
-  switch (profile.template) {
-    case "PREMIUM":
-      return <PremiumTemplate {...props} />;
-    case "CORPORATE":
-      return <CorporateTemplate {...props} />;
-    case "MINIMAL":
-    default:
-      return <MinimalTemplate {...props} />;
-  }
+  return <ProfileRenderer profile={profileToView(profile)} links={linksToView(profile.links)} />;
 }

@@ -1,33 +1,28 @@
+import { prisma } from "@/lib/prisma";
 import { ensureProfile } from "@/server/profile-actions";
-import { ProfileForm } from "@/components/dashboard/ProfileForm";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { appUrl } from "@/lib/utils";
+import { profileToView, linksToView } from "@/server/profile-shape";
 
-export default async function DashboardHome() {
-  const { profile } = await ensureProfile();
+export const dynamic = "force-dynamic";
+
+export default async function DashboardPage() {
+  const { user, profile } = await ensureProfile();
+  const links = await prisma.link.findMany({
+    where: { profileId: profile.id },
+    orderBy: { order: "asc" },
+  });
+
+  const base = appUrl();
+  const host = base.replace(/^https?:\/\//, "");
+
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Perfil</CardTitle>
-          <CardDescription>Información pública que verán quienes escaneen tu tarjeta.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ProfileForm
-            initial={{
-              id: profile.id,
-              slug: profile.slug,
-              fullName: profile.fullName,
-              jobTitle: profile.jobTitle ?? "",
-              companyName: profile.companyName ?? "",
-              description: profile.description ?? "",
-              email: profile.email ?? "",
-              phone: profile.phone ?? "",
-              whatsapp: profile.whatsapp ?? "",
-              website: profile.website ?? "",
-            }}
-          />
-        </CardContent>
-      </Card>
-    </div>
+    <DashboardShell
+      user={{ email: user.email, name: user.name, role: user.role }}
+      profile={profileToView(profile)}
+      links={linksToView(links)}
+      appHost={host}
+      appBaseUrl={base}
+    />
   );
 }

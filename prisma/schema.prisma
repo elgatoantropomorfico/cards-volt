@@ -117,6 +117,30 @@ enum Template {
   CORPORATE
 }
 
+enum ThemeMode {
+  LIGHT
+  DARK
+}
+
+enum LinkKind {
+  WEBSITE
+  INSTAGRAM
+  LINKEDIN
+  TWITTER
+  FACEBOOK
+  YOUTUBE
+  TIKTOK
+  GITHUB
+  SPOTIFY
+  CALENDAR
+  EMAIL
+  PHONE
+  WHATSAPP
+  MAP
+  PDF
+  OTHER
+}
+
 model Profile {
   id           String   @id @default(cuid())
   slug         String   @unique
@@ -139,10 +163,23 @@ model Profile {
   website      String?
   avatarUrl    String?
   coverUrl     String?
+  location     String?
+  locationLat  Float?
+  locationLng  Float?
+
+  // Social handles (denormalized for speed)
+  instagram    String?
+  linkedin     String?
+  twitter      String?
+  facebook     String?
+  youtube      String?
+  tiktok       String?
+  github       String?
 
   // Theming
   template     Template @default(MINIMAL)
   primaryColor String   @default("#0F172A")
+  themeMode    ThemeMode @default(LIGHT)
 
   links        Link[]
   card         NfcCard?
@@ -158,9 +195,10 @@ model Link {
   id        String   @id @default(cuid())
   profileId String
   profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  kind      LinkKind @default(WEBSITE)
   label     String
   url       String
-  icon      String?  // lucide icon name or "url"
+  icon      String?
   order     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

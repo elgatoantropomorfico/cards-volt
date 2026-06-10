@@ -22,6 +22,10 @@ export function buildVCard(p: Profile): string {
   if (p.phone) lines.push(`TEL;TYPE=CELL,VOICE:${esc(p.phone)}`);
   if (p.whatsapp) lines.push(`TEL;TYPE=WORK,VOICE:${esc(p.whatsapp)}`);
   if (p.website) lines.push(`URL:${esc(p.website)}`);
+  if (p.location) lines.push(`ADR;TYPE=WORK:;;${esc(p.location)};;;;`);
+  if (p.instagram) lines.push(`X-SOCIALPROFILE;type=instagram:${esc(p.instagram)}`);
+  if (p.linkedin) lines.push(`X-SOCIALPROFILE;type=linkedin:${esc(p.linkedin)}`);
+  if (p.twitter) lines.push(`X-SOCIALPROFILE;type=twitter:${esc(p.twitter)}`);
   if (p.description) lines.push(`NOTE:${esc(p.description)}`);
   lines.push("END:VCARD");
   return lines.join("\r\n");

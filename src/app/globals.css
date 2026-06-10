@@ -4,50 +4,117 @@
 
 :root {
   --background: 0 0% 100%;
-  --foreground: 222 47% 11%;
+  --foreground: 222 47% 9%;
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
+  --card-foreground: 222 47% 9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 9%;
   --primary: 222 47% 11%;
   --primary-foreground: 0 0% 98%;
-  --secondary: 210 40% 96%;
+  --secondary: 220 14% 96%;
   --secondary-foreground: 222 47% 11%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222 47% 11%;
+  --muted: 220 14% 96%;
+  --muted-foreground: 220 9% 46%;
+  --accent: 262 83% 96%;
+  --accent-foreground: 262 70% 26%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 98%;
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 222 47% 11%;
-  --radius: 0.75rem;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 262 83% 58%;
+  --radius: 0.875rem;
 }
 
 .dark {
-  --background: 222 47% 7%;
+  --background: 224 47% 6%;
   --foreground: 0 0% 98%;
-  --card: 222 47% 9%;
+  --card: 222 47% 8%;
   --card-foreground: 0 0% 98%;
+  --popover: 222 47% 9%;
+  --popover-foreground: 0 0% 98%;
   --primary: 0 0% 98%;
   --primary-foreground: 222 47% 11%;
-  --secondary: 217 33% 17%;
+  --secondary: 217 33% 14%;
   --secondary-foreground: 0 0% 98%;
-  --muted: 217 33% 17%;
-  --muted-foreground: 215 20% 65%;
-  --accent: 217 33% 17%;
-  --accent-foreground: 0 0% 98%;
+  --muted: 217 33% 14%;
+  --muted-foreground: 220 9% 65%;
+  --accent: 262 50% 18%;
+  --accent-foreground: 262 90% 92%;
   --destructive: 0 63% 41%;
   --destructive-foreground: 0 0% 98%;
-  --border: 217 33% 17%;
-  --input: 217 33% 17%;
-  --ring: 212 27% 84%;
+  --border: 217 19% 18%;
+  --input: 217 19% 18%;
+  --ring: 262 83% 65%;
 }
 
-* { @apply border-border; }
+* { @apply border-border; -webkit-tap-highlight-color: transparent; }
 html, body { @apply h-full; }
-body { @apply bg-background text-foreground antialiased; font-feature-settings: "rlig" 1, "calt" 1; }
+body {
+  @apply bg-background text-foreground antialiased;
+  font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1, "cv11" 1;
+  text-rendering: optimizeLegibility;
+}
+::selection { background: hsl(var(--ring) / 0.25); color: inherit; }
 
-/* Hide number input spinners */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 input[type="number"] { -moz-appearance: textfield; }
+
+/* Soft scrollbars */
+* { scrollbar-width: thin; scrollbar-color: hsl(var(--muted-foreground) / 0.25) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: hsl(var(--muted-foreground) / 0.25); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+*::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.45); border: 2px solid transparent; background-clip: padding-box; }
+
+/* Utility patterns */
+.bg-dot {
+  background-image: radial-gradient(hsl(var(--foreground) / 0.08) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.bg-gradient-mesh {
+  background:
+    radial-gradient(at 20% 10%, hsl(262 83% 70% / 0.18), transparent 50%),
+    radial-gradient(at 80% 0%, hsl(199 89% 64% / 0.15), transparent 50%),
+    radial-gradient(at 70% 90%, hsl(330 80% 70% / 0.18), transparent 50%),
+    radial-gradient(at 10% 90%, hsl(160 70% 60% / 0.14), transparent 50%);
+}
+.glass {
+  background: hsl(var(--background) / 0.7);
+  backdrop-filter: saturate(160%) blur(14px);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+  border: 1px solid hsl(var(--border));
+}
+.surface-card {
+  @apply rounded-2xl border bg-card text-card-foreground shadow-soft;
+}
+.text-balance { text-wrap: balance; }
+.text-pretty { text-wrap: pretty; }
+
+/* Phone frame for previews */
+.phone-frame {
+  width: 360px;
+  height: 720px;
+  border-radius: 48px;
+  padding: 14px;
+  background: linear-gradient(180deg, #0b0f1a 0%, #181a25 100%);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.06) inset,
+    0 30px 60px -30px rgba(15,23,42,0.55),
+    0 12px 24px -12px rgba(15,23,42,0.4);
+}
+.phone-screen {
+  width: 100%;
+  height: 100%;
+  border-radius: 36px;
+  overflow: hidden;
+  background: white;
+  position: relative;
+}
+.phone-notch {
+  position: absolute;
+  top: 8px; left: 50%; transform: translateX(-50%);
+  width: 110px; height: 26px;
+  background: #0b0f1a;
+  border-radius: 999px;
+  z-index: 10;
+}
