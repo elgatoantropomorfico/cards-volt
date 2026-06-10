@@ -8,10 +8,13 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const { user, profile } = await ensureProfile();
-  const links = await prisma.link.findMany({
-    where: { profileId: profile.id },
-    orderBy: { order: "asc" },
-  });
+  const [links, nfcCard] = await Promise.all([
+    prisma.link.findMany({
+      where: { profileId: profile.id },
+      orderBy: { order: "asc" },
+    }),
+    prisma.nfcCard.findUnique({ where: { profileId: profile.id } }),
+  ]);
 
   const base = appUrl();
   const host = base.replace(/^https?:\/\//, "");
@@ -23,6 +26,16 @@ export default async function DashboardPage() {
       links={linksToView(links)}
       appHost={host}
       appBaseUrl={base}
+      nfcCard={
+        nfcCard
+          ? {
+              id: nfcCard.id,
+              code: nfcCard.code,
+              status: nfcCard.status,
+              assignedAt: nfcCard.assignedAt?.toISOString() ?? null,
+            }
+          : null
+      }
     />
   );
 }

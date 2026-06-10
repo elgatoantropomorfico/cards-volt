@@ -392,6 +392,7 @@ export async function assignCard(cardId: string, profileId: string | null): Prom
     });
   }
   revalidatePath("/admin");
+  revalidatePath("/dashboard");
   return { ok: true };
 }
 
@@ -401,5 +402,6 @@ export async function setCardStatus(cardId: string, status: "ACTIVE" | "INACTIVE
   if (!card) return { ok: false, error: "Tarjeta inexistente" };
   await prisma.nfcCard.update({ where: { id: cardId }, data: { status } });
   revalidatePath("/admin");
+  revalidatePath("/dashboard");
   return { ok: true };
 }

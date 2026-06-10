@@ -97,7 +97,7 @@ export function ProfileSection({
     ) : null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 sm:pb-6">
       <Card>
         <CardHeader>
           <CardTitle>Identidad pública</CardTitle>
@@ -178,8 +178,8 @@ export function ProfileSection({
         </CardContent>
       </Card>
 
-      <div className="sticky bottom-4 z-10 flex justify-end">
-        <Button onClick={onSave} disabled={pending} variant="gradient" size="lg" className="shadow-pop">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 p-3 backdrop-blur sm:static sm:inset-auto sm:border-0 sm:bg-transparent sm:p-0">
+        <Button onClick={onSave} disabled={pending} variant="gradient" size="lg" className="w-full shadow-pop sm:w-auto">
           {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Guardar cambios
         </Button>

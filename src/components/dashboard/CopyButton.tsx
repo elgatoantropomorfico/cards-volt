@@ -3,11 +3,12 @@ import * as React from "react";
 import { Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function CopyButton({ value }: { value: string }) {
+export function CopyButton({ value, className }: { value: string; className?: string }) {
   const [copied, setCopied] = React.useState(false);
   return (
     <Button
       variant="outline"
+      className={className}
       onClick={async () => {
         await navigator.clipboard.writeText(value);
         setCopied(true);

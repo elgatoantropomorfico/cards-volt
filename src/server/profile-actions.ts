@@ -213,3 +213,47 @@ export async function reorderLinks(orderedIds: string[]): Promise<ActionResult> 
   revalidatePath("/dashboard");
   return { ok: true };
 }
+
+function cardToView(card: {
+  id: string;
+  code: string;
+  status: "UNASSIGNED" | "ACTIVE" | "INACTIVE" | "LOST";
+  assignedAt: Date | null;
+}) {
+  return {
+    id: card.id,
+    code: card.code,
+    status: card.status,
+    assignedAt: card.assignedAt?.toISOString() ?? null,
+  };
+}
+
+export async function getMyNfcCard() {
+  const { profile } = await loadOwnedProfile();
+  const card = await prisma.nfcCard.findUnique({ where: { profileId: profile.id } });
+  return { ok: true as const, card: card ? cardToView(card) : null };
+}
+
+export async function markMyCardLost(): Promise<ActionResult> {
+  const { profile } = await loadOwnedProfile();
+  const card = await prisma.nfcCard.findUnique({ where: { profileId: profile.id } });
+  if (!card) return { ok: false, error: "No tenés una tarjeta NFC vinculada" };
+  if (card.status === "LOST") return { ok: true };
+  await prisma.nfcCard.update({ where: { id: card.id }, data: { status: "LOST" } });
+  revalidatePath("/dashboard");
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+export async function unlinkMyCard(): Promise<ActionResult> {
+  const { profile } = await loadOwnedProfile();
+  const card = await prisma.nfcCard.findUnique({ where: { profileId: profile.id } });
+  if (!card) return { ok: false, error: "No tenés una tarjeta NFC vinculada" };
+  await prisma.nfcCard.update({
+    where: { id: card.id },
+    data: { profileId: null, status: "UNASSIGNED", assignedAt: null },
+  });
+  revalidatePath("/dashboard");
+  revalidatePath("/admin");
+  return { ok: true };
+}

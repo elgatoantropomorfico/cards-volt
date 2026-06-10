@@ -63,14 +63,14 @@ export function AppearanceSection({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 sm:pb-6">
       <Card>
         <CardHeader>
           <CardTitle>Plantilla</CardTitle>
           <CardDescription>El cambio se ve en la vista previa al instante.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-3">
+        <CardContent className="px-3 sm:px-6">
+          <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:pb-0">
             {TEMPLATES.map((t) => {
               const active = profile.template === t.id;
               return (
@@ -79,23 +79,23 @@ export function AppearanceSection({
                   type="button"
                   onClick={() => onChange({ template: t.id })}
                   className={cn(
-                    "group relative overflow-hidden rounded-2xl border bg-card p-4 text-left transition",
+                    "group relative min-w-[118px] max-w-[132px] shrink-0 snap-start overflow-hidden rounded-2xl border bg-card p-2.5 text-left transition sm:min-w-0 sm:max-w-none sm:p-3",
                     active ? "border-foreground shadow-pop ring-2 ring-foreground/10" : "hover:border-foreground/30",
                   )}
                 >
-                  <div className="aspect-[4/5] overflow-hidden rounded-xl">{t.preview}</div>
-                  <div className="mt-3 flex items-center gap-2">
+                  <div className="aspect-[4/5] overflow-hidden rounded-lg sm:rounded-xl">{t.preview}</div>
+                  <div className="mt-2 flex items-center gap-1.5 sm:mt-2.5 sm:gap-2">
                     <span
                       className={cn(
-                        "grid h-7 w-7 place-items-center rounded-md",
+                        "grid h-6 w-6 shrink-0 place-items-center rounded-md sm:h-7 sm:w-7",
                         active ? "bg-foreground text-background" : "bg-secondary text-foreground",
                       )}
                     >
                       {t.icon}
                     </span>
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold leading-tight">{t.name}</div>
-                      <div className="truncate text-[11px] text-muted-foreground">{t.tagline}</div>
+                      <div className="text-xs font-semibold leading-tight sm:text-sm">{t.name}</div>
+                      <div className="hidden text-[10px] text-muted-foreground sm:block sm:text-[11px]">{t.tagline}</div>
                     </div>
                   </div>
                   {active && (
@@ -193,8 +193,8 @@ export function AppearanceSection({
         </CardContent>
       </Card>
 
-      <div className="sticky bottom-4 z-10 flex justify-end">
-        <Button onClick={onSave} disabled={pending} variant="gradient" size="lg" className="shadow-pop">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 p-3 backdrop-blur sm:static sm:inset-auto sm:border-0 sm:bg-transparent sm:p-0">
+        <Button onClick={onSave} disabled={pending} variant="gradient" size="lg" className="w-full shadow-pop sm:w-auto">
           {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Guardar apariencia
         </Button>

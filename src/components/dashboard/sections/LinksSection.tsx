@@ -101,14 +101,14 @@ export function LinksSection({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 pb-6 sm:space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Nuevo bloque</CardTitle>
-          <CardDescription>Elegí el tipo, agregá una etiqueta y la URL/handle. Detectamos automáticamente el tipo según la URL.</CardDescription>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Nuevo bloque</CardTitle>
+          <CardDescription>Elegí el tipo, agregá una etiqueta y la URL/handle.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 md:grid-cols-[170px_1fr_2fr_auto]">
+          <div className="space-y-3 md:grid md:grid-cols-[170px_1fr_2fr_auto] md:gap-3 md:space-y-0">
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Tipo</Label>
               <KindSelect value={adding.kind} onChange={(v) => setAdding({ ...adding, kind: v })} />
@@ -137,8 +137,8 @@ export function LinksSection({
                 placeholder={SOCIALS[adding.kind].placeholder}
               />
             </div>
-            <div className="flex items-end">
-              <Button onClick={onAdd} disabled={pending} variant="gradient">
+            <div className="md:flex md:items-end">
+              <Button onClick={onAdd} disabled={pending} variant="gradient" className="w-full md:w-auto">
                 {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 Agregar
               </Button>
@@ -148,9 +148,13 @@ export function LinksSection({
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Mis bloques ({links.length})</CardTitle>
-          <CardDescription>Arrastrá para reordenar. El orden se refleja en tu perfil público.</CardDescription>
+        <CardHeader className="pb-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <CardTitle className="text-lg">Mis bloques ({links.length})</CardTitle>
+              <CardDescription>Arrastrá para reordenar. El orden se refleja en tu perfil público.</CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {links.length === 0 ? (
@@ -204,30 +208,42 @@ function SortableRow({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-3 rounded-2xl border bg-card p-3 shadow-soft"
+      className="rounded-2xl border bg-card p-3 shadow-soft"
     >
-      <button
-        {...attributes}
-        {...listeners}
-        className="grid h-9 w-9 shrink-0 cursor-grab place-items-center rounded-lg text-muted-foreground hover:bg-secondary active:cursor-grabbing"
-        aria-label="Reordenar"
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
-      <span
-        className="grid h-9 w-9 shrink-0 place-items-center rounded-lg"
-        style={{ background: `${Meta.color}14`, color: Meta.color }}
-      >
-        <Icon className="h-4 w-4" />
-      </span>
-      <div className="grid flex-1 grid-cols-1 gap-2 md:grid-cols-[160px_1fr_2fr]">
-        <KindSelect value={row.kind} onChange={(v) => onPatch({ kind: v })} compact />
-        <Input value={row.label} onChange={(e) => onPatch({ label: e.target.value })} placeholder="Etiqueta" />
-        <Input value={row.url} onChange={(e) => onPatch({ url: e.target.value })} placeholder={Meta.placeholder} />
+      <div className="flex items-center gap-2">
+        <button
+          {...attributes}
+          {...listeners}
+          className="grid h-9 w-9 shrink-0 cursor-grab place-items-center rounded-lg text-muted-foreground hover:bg-secondary active:cursor-grabbing"
+          aria-label="Reordenar"
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+        <span
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-lg"
+          style={{ background: `${Meta.color}14`, color: Meta.color }}
+        >
+          <Icon className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <KindSelect value={row.kind} onChange={(v) => onPatch({ kind: v })} compact />
+        </div>
       </div>
-      <div className="flex shrink-0 items-center gap-1">
-        <Button variant="outline" size="sm" onClick={onSave}>
-          <Save className="h-3.5 w-3.5" />
+
+      <div className="mt-3 grid gap-2">
+        <div className="space-y-1">
+          <Label className="text-[11px] text-muted-foreground md:sr-only">Etiqueta</Label>
+          <Input value={row.label} onChange={(e) => onPatch({ label: e.target.value })} placeholder="Etiqueta" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[11px] text-muted-foreground md:sr-only">URL</Label>
+          <Input value={row.url} onChange={(e) => onPatch({ url: e.target.value })} placeholder={Meta.placeholder} />
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+        <Button variant="outline" onClick={onSave} className="w-full">
+          <Save className="h-3.5 w-3.5" /> Guardar
         </Button>
         <Button variant="ghost" size="icon" onClick={onDelete} aria-label="Eliminar">
           <Trash2 className="h-4 w-4 text-rose-500" />
@@ -248,7 +264,7 @@ function KindSelect({
 }) {
   return (
     <Select value={value} onValueChange={(v) => onChange(v as LinkKind)}>
-      <SelectTrigger className={compact ? "h-9" : ""}>
+      <SelectTrigger className={compact ? "h-9 w-full" : "w-full"}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

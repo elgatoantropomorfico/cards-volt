@@ -46,8 +46,8 @@ export function UsersManager({
           }
         />
       </div>
-      <div className="overflow-hidden rounded-2xl border bg-card shadow-soft">
-        <table className="min-w-full text-sm">
+      <div className="overflow-x-auto rounded-2xl border bg-card shadow-soft">
+        <table className="min-w-[640px] w-full text-sm">
           <thead className="bg-secondary/60 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="px-4 py-3">Nombre</th>
@@ -87,6 +87,8 @@ function UserRow({
   onEdit: () => void;
 }) {
   const [active, setActive] = React.useState(u.profile?.active ?? false);
+  React.useEffect(() => setActive(u.profile?.active ?? false), [u.profile?.active]);
+
   async function onToggle(v: boolean) {
     if (!u.profile) return;
     setActive(v);
@@ -94,6 +96,8 @@ function UserRow({
     if (!res.ok) {
       setActive(!v);
       toast({ title: "Error", description: res.error, variant: "error" });
+    } else {
+      onChanged();
     }
   }
   async function onDelete() {

@@ -27,6 +27,15 @@ export type ProfileLink = {
   order: number;
 };
 
+export type NfcCardStatus = "UNASSIGNED" | "ACTIVE" | "INACTIVE" | "LOST";
+
+export type NfcCardView = {
+  id: string;
+  code: string;
+  status: NfcCardStatus;
+  assignedAt: string | null;
+};
+
 export type ProfileView = {
   id: string;
   slug: string;
