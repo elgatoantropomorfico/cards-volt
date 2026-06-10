@@ -23,14 +23,12 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24,
     cookieCache: { enabled: true, maxAge: 60 * 5 },
   },
-  user: {
-    additionalFields: {
-      role: { type: "string", required: false, defaultValue: "USER", input: false },
-      companyId: { type: "string", required: false, input: false },
-    },
-  },
   advanced: {
     cookiePrefix: "voltcards",
+    defaultCookieAttributes: {
+      sameSite: "lax",
+      secure: true,
+    },
   },
   plugins: [nextCookies()],
 });
