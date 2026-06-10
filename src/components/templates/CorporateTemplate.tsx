@@ -11,7 +11,6 @@ import {
   customLinksOnly,
 } from "./shared";
 import { TemplateRoot } from "./TemplateRoot";
-import { CoverImage } from "./CoverImage";
 
 export function CorporateTemplate({
   profile,
@@ -38,18 +37,16 @@ export function CorporateTemplate({
         style={{ background: `linear-gradient(90deg, ${accent}, ${rgba(accent, 0.3)})` }}
       />
 
-      {profile.coverUrl ? (
-        <CoverImage src={profile.coverUrl} alt={profile.companyName ?? profile.fullName} className="border-b" />
-      ) : null}
-
       <div className="mx-auto max-w-md px-6 py-8">
         <header className="flex items-center justify-between border-b border-slate-200 pb-4">
-          {!profile.coverUrl && (
+          {profile.coverUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={profile.coverUrl} alt={profile.companyName ?? ""} className="h-8 object-contain" />
+          ) : (
             <span className="text-[11px] uppercase tracking-[0.2em] text-slate-500">
               {profile.companyName || "Tarjeta digital"}
             </span>
           )}
-          {profile.coverUrl && <span />}
           <span className="font-mono text-[10px] uppercase text-slate-400">/{profile.slug}</span>
         </header>
 

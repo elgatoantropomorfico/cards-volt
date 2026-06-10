@@ -187,7 +187,7 @@ export function AppearanceSection({
             </div>
             <div className="space-y-2">
               <Label>Portada / Logo de empresa</Label>
-              <ImageUpload value={profile.coverUrl} onChange={(v) => onChange({ coverUrl: v })} folder="covers" shape="cover" hint="Portada horizontal 2:1 para Premium y Corporate." />
+              <ImageUpload value={profile.coverUrl} onChange={(v) => onChange({ coverUrl: v })} folder="covers" shape="cover" hint="Se recorta a 2:1 al subir. Premium la usa como hero; Corporate como logo." />
             </div>
           </div>
         </CardContent>

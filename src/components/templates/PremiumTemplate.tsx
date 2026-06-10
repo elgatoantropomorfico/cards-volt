@@ -11,7 +11,6 @@ import {
   readableOn,
 } from "./shared";
 import { TemplateRoot } from "./TemplateRoot";
-import { CoverImage } from "./CoverImage";
 
 export function PremiumTemplate({
   profile,
@@ -34,11 +33,15 @@ export function PremiumTemplate({
     .join("")
     .toUpperCase();
 
-  const heroGradient = profile.coverUrl
-    ? undefined
-    : isDark
-      ? `radial-gradient(120% 80% at 50% -10%, ${rgba(accent, 0.95)} 0%, ${rgba(accent, 0.55)} 35%, ${bgBase} 90%)`
-      : `radial-gradient(120% 80% at 50% -10%, ${rgba(accent, 0.75)} 0%, ${rgba(accent, 0.28)} 42%, ${bgBase} 92%)`;
+  const heroGradient = isDark
+    ? `radial-gradient(120% 80% at 50% -10%, ${rgba(accent, 0.95)} 0%, ${rgba(accent, 0.55)} 35%, ${bgBase} 90%)`
+    : `radial-gradient(120% 80% at 50% -10%, ${rgba(accent, 0.75)} 0%, ${rgba(accent, 0.28)} 42%, ${bgBase} 92%)`;
+
+  const heroBackground = profile.coverUrl
+    ? isDark
+      ? `linear-gradient(180deg, rgba(7,7,16,0) 30%, rgba(7,7,16,0.85) 100%), url(${profile.coverUrl}) center/cover`
+      : `linear-gradient(180deg, rgba(255,255,255,0) 30%, rgba(250,250,250,0.88) 100%), url(${profile.coverUrl}) center/cover`
+    : heroGradient;
 
   const heroTextClass = isDark ? "text-white" : "text-slate-900";
   const heroMutedClass = isDark ? "text-white/70" : "text-slate-600";
@@ -52,27 +55,10 @@ export function PremiumTemplate({
     >
       {/* HERO */}
       <div className="relative overflow-hidden">
-        {profile.coverUrl ? (
-          <CoverImage
-            src={profile.coverUrl}
-            alt={profile.companyName ?? profile.fullName}
-            overlay={
-              <div
-                className="absolute inset-0"
-                style={{
-                  background: isDark
-                    ? "linear-gradient(180deg, rgba(7,7,16,0.15) 0%, rgba(7,7,16,0.88) 100%)"
-                    : "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(250,250,250,0.92) 100%)",
-                }}
-              />
-            }
-          />
-        ) : (
-          <div className="aspect-[2/1] w-full" style={{ background: heroGradient }} />
-        )}
+        <div className="absolute inset-0" style={{ background: heroBackground }} />
         <div className="absolute inset-0 bg-noise opacity-20 mix-blend-overlay" />
 
-        <div className={`relative px-6 pb-20 pt-10 text-center ${profile.coverUrl ? "absolute inset-x-0 bottom-0" : ""}`}>
+        <div className="relative px-6 pb-20 pt-10 text-center">
           <p className={`text-[11px] uppercase tracking-[0.2em] ${heroMutedClass}`}>
             {profile.companyName || "Volt Cards"}
           </p>
