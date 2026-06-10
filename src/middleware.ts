@@ -5,11 +5,7 @@ export function middleware(req: NextRequest) {
   // Only gate dashboard areas. Public profile pages are open.
   const sessionCookie = req.cookies
     .getAll()
-    .some(
-      (c) =>
-        c.name.startsWith("voltcards") &&
-        (c.name.includes("session_token") || c.name.includes("session")),
-    );
+    .some((c) => c.name.includes("voltcards.session_token"));
 
   const isProtected =
     pathname.startsWith("/dashboard") ||
