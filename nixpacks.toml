@@ -8,4 +8,4 @@ cmds = ["npm ci --no-audit --no-fund"]
 cmds = ["npx prisma generate", "npm run build"]
 
 [start]
-cmd = "npx prisma db push --accept-data-loss --skip-generate && npx tsx prisma/seed.ts && npx next start -p $PORT"
+cmd = "npx prisma db execute --file prisma/migrate-remove-companies.sql --schema prisma/schema.prisma; npx prisma db push --accept-data-loss --skip-generate && npx tsx prisma/seed.ts && npx next start -p $PORT"

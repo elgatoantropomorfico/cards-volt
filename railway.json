@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "npx prisma db push --accept-data-loss --skip-generate && npx tsx prisma/seed.ts && node node_modules/next/dist/bin/next start -p $PORT",
+    "startCommand": "npx prisma db execute --file prisma/migrate-remove-companies.sql --schema prisma/schema.prisma; npx prisma db push --accept-data-loss --skip-generate && npx tsx prisma/seed.ts && node node_modules/next/dist/bin/next start -p $PORT",
     "healthcheckPath": "/api/health",
     "healthcheckTimeout": 120,
     "restartPolicyType": "ON_FAILURE",
