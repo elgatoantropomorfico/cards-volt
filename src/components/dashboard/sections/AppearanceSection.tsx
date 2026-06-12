@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Save, Sun, Moon, Sparkles, LayoutPanelTop, Building2 } from "lucide-react";
+import { Loader2, Save, Sun, Moon } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -9,35 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/toaster";
 import { ImageUpload } from "../ImageUpload";
-import type { ProfileView, Template, ThemeMode } from "@/lib/profile-types";
+import type { ProfileView, ThemeMode } from "@/lib/profile-types";
+import { TEMPLATE_CATALOG } from "@/lib/templates-meta";
 import { updateAppearance } from "@/server/profile-actions";
 import { cn } from "@/lib/utils";
 
-const PRESETS = ["#0F172A", "#7C3AED", "#2563EB", "#10B981", "#F59E0B", "#EC4899", "#06B6D4", "#E11D48"];
-
-const TEMPLATES: { id: Template; name: string; tagline: string; icon: React.ReactNode; preview: React.ReactNode }[] = [
-  {
-    id: "MINIMAL",
-    name: "Minimal",
-    tagline: "Outlined · estilo Linktree refinado",
-    icon: <Sparkles className="h-4 w-4" />,
-    preview: <PreviewSwatch from="#fafafa" to="#fafafa" pill="#0F172A" />,
-  },
-  {
-    id: "PREMIUM",
-    name: "Premium",
-    tagline: "HiHello / Popl · arco curvo, dramático",
-    icon: <LayoutPanelTop className="h-4 w-4" />,
-    preview: <PreviewSwatch from="#070710" to="#1a0e3a" pill="#A855F7" dark />,
-  },
-  {
-    id: "CORPORATE",
-    name: "Corporate",
-    tagline: "Ejecutivo · clásico, sobrio",
-    icon: <Building2 className="h-4 w-4" />,
-    preview: <PreviewSwatch from="#ffffff" to="#f1f5f9" pill="#1E3A8A" />,
-  },
-];
+const PRESETS = ["#0F172A", "#7C3AED", "#2563EB", "#10B981", "#F59E0B", "#EC4899", "#06B6D4", "#E11D48", "#C9A227", "#DB2777", "#DC2626", "#F97316"];
 
 export function AppearanceSection({
   profile,
@@ -70,32 +47,33 @@ export function AppearanceSection({
           <CardDescription>El cambio se ve en la vista previa al instante.</CardDescription>
         </CardHeader>
         <CardContent className="px-3 sm:px-6">
-          <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:pb-0">
-            {TEMPLATES.map((t) => {
+          <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory sm:mx-0 sm:grid sm:grid-cols-4 sm:gap-2 sm:overflow-visible sm:pb-0 lg:grid-cols-4">
+            {TEMPLATE_CATALOG.map((t) => {
               const active = profile.template === t.id;
               return (
                 <button
                   key={t.id}
                   type="button"
-                  onClick={() => onChange({ template: t.id })}
+                  onClick={() => onChange({ template: t.id, primaryColor: t.defaultColor })}
                   className={cn(
-                    "group relative min-w-[118px] max-w-[132px] shrink-0 snap-start overflow-hidden rounded-2xl border bg-card p-2.5 text-left transition sm:min-w-0 sm:max-w-none sm:p-3",
+                    "group relative min-w-[100px] max-w-[110px] shrink-0 snap-start overflow-hidden rounded-2xl border bg-card p-2 text-left transition sm:min-w-0 sm:max-w-none",
                     active ? "border-foreground shadow-pop ring-2 ring-foreground/10" : "hover:border-foreground/30",
                   )}
                 >
-                  <div className="aspect-[4/5] overflow-hidden rounded-lg sm:rounded-xl">{t.preview}</div>
-                  <div className="mt-2 flex items-center gap-1.5 sm:mt-2.5 sm:gap-2">
+                  <div className="aspect-[3/4] overflow-hidden rounded-lg">
+                    <PreviewSwatch from={t.previewFrom} to={t.previewTo} pill={t.previewPill} dark={t.dark} />
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-1.5">
                     <span
                       className={cn(
-                        "grid h-6 w-6 shrink-0 place-items-center rounded-md sm:h-7 sm:w-7",
+                        "grid h-5 w-5 shrink-0 place-items-center rounded-md",
                         active ? "bg-foreground text-background" : "bg-secondary text-foreground",
                       )}
                     >
                       {t.icon}
                     </span>
                     <div className="min-w-0">
-                      <div className="text-xs font-semibold leading-tight sm:text-sm">{t.name}</div>
-                      <div className="hidden text-[10px] text-muted-foreground sm:block sm:text-[11px]">{t.tagline}</div>
+                      <div className="truncate text-[11px] font-semibold leading-tight">{t.name}</div>
                     </div>
                   </div>
                   {active && (
@@ -108,6 +86,9 @@ export function AppearanceSection({
               );
             })}
           </div>
+          <p className="mt-3 text-[11px] text-muted-foreground">
+            {TEMPLATE_CATALOG.find((t) => t.id === profile.template)?.niche}
+          </p>
         </CardContent>
       </Card>
 

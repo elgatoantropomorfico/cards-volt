@@ -84,6 +84,11 @@ enum Template {
   MINIMAL
   PREMIUM
   CORPORATE
+  NOIR
+  BLOOM
+  STUDIO
+  NOVA
+  VIVID
 }
 
 enum ThemeMode {

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toaster";
 import { Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { MarketingPhoneMock } from "@/components/marketing/MarketingPhoneMock";
 
 export default function LoginPage() {
   return (
@@ -100,37 +101,12 @@ function LoginForm() {
         </div>
       </div>
 
-      {/* Right: gradient art */}
+      {/* Right: live profile preview */}
       <div className="relative hidden overflow-hidden bg-[#070710] lg:block">
         <div className="absolute inset-0 bg-[radial-gradient(120%_80%_at_80%_10%,rgba(168,85,247,0.45)_0%,transparent_50%),radial-gradient(120%_80%_at_10%_80%,rgba(236,72,153,0.35)_0%,transparent_50%)]" />
         <div className="absolute inset-0 bg-noise opacity-30 mix-blend-overlay" />
         <div className="absolute inset-0 grid place-items-center p-12">
-          <div className="phone-frame">
-            <div className="phone-screen relative">
-              <div className="phone-notch" />
-              <div className="relative h-full w-full bg-[#070710] text-white">
-                <div className="absolute inset-x-0 top-0 h-44 bg-[radial-gradient(120%_80%_at_50%_-10%,rgba(168,85,247,0.95)_0%,rgba(168,85,247,0.5)_35%,#070710_90%)]" />
-                <div className="relative pt-12 text-center">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-white/70">Volt</p>
-                  <h2 className="font-display mt-1 text-xl font-semibold">Tu tarjeta</h2>
-                </div>
-                <svg viewBox="0 0 1440 200" preserveAspectRatio="none" className="absolute inset-x-0 top-36 h-10 w-full text-[#070710]" aria-hidden>
-                  <path d="M0,200 C320,80 1120,80 1440,200 L1440,200 L0,200 Z" fill="currentColor" />
-                </svg>
-                <div className="relative -mt-1 flex justify-center">
-                  <div className="rounded-3xl bg-gradient-to-br from-fuchsia-500 to-purple-600 p-[2px]">
-                    <div className="grid h-20 w-20 place-items-center rounded-[20px] bg-[#070710] ring-4 ring-[#070710] text-white font-display text-2xl">VC</div>
-                  </div>
-                </div>
-                <div className="mt-4 space-y-2 px-6">
-                  <div className="rounded-2xl bg-purple-500 py-2.5 text-center text-xs font-semibold">Guardar contacto</div>
-                  <div className="rounded-2xl border border-white/15 bg-white/10 py-2 text-center text-xs text-white">Instagram</div>
-                  <div className="rounded-2xl border border-white/15 bg-white/10 py-2 text-center text-xs text-white">LinkedIn</div>
-                  <div className="rounded-2xl border border-white/15 bg-white/10 py-2 text-center text-xs text-white">Web</div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <MarketingPhoneMock template="PREMIUM" />
         </div>
       </div>
     </div>

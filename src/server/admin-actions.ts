@@ -10,6 +10,7 @@ import { isValidSlug, normalizeSlug } from "@/lib/utils";
 import { normalizeLinkUrl } from "@/lib/socials";
 import { formatZodError, optionalHttpUrl, optionalWebsite } from "@/lib/validation";
 import type { LinkKind } from "@/lib/profile-types";
+import { TEMPLATE_VALUES } from "@/lib/profile-types";
 
 export type ActionResult = { ok: true; data?: unknown } | { ok: false; error: string };
 
@@ -31,7 +32,7 @@ const FullProfileSchema = z.object({
   twitter: z.string().optional().nullable(),
   avatarUrl: optionalHttpUrl,
   coverUrl: optionalHttpUrl,
-  template: z.enum(["MINIMAL", "PREMIUM", "CORPORATE"]).default("MINIMAL"),
+  template: z.enum(TEMPLATE_VALUES).default("MINIMAL"),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#7C3AED"),
   themeMode: z.enum(["LIGHT", "DARK"]).default("LIGHT"),
 });

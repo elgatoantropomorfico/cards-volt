@@ -1,4 +1,15 @@
-export type Template = "MINIMAL" | "PREMIUM" | "CORPORATE";
+export const TEMPLATE_VALUES = [
+  "MINIMAL",
+  "PREMIUM",
+  "CORPORATE",
+  "NOIR",
+  "BLOOM",
+  "STUDIO",
+  "NOVA",
+  "VIVID",
+] as const;
+
+export type Template = (typeof TEMPLATE_VALUES)[number];
 export type ThemeMode = "LIGHT" | "DARK";
 export type LinkKind =
   | "WEBSITE"

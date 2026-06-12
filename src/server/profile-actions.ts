@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { isValidSlug, normalizeSlug } from "@/lib/utils";
 import type { LinkKind } from "@/lib/profile-types";
+import { TEMPLATE_VALUES } from "@/lib/profile-types";
 import { normalizeLinkUrl } from "@/lib/socials";
 import { formatZodError, optionalEmail, optionalHttpUrl, optionalWebsite } from "@/lib/validation";
 
@@ -121,7 +122,7 @@ export async function updateProfile(input: z.infer<typeof ProfileSchema>): Promi
 }
 
 const AppearanceSchema = z.object({
-  template: z.enum(["MINIMAL", "PREMIUM", "CORPORATE"]),
+  template: z.enum(TEMPLATE_VALUES),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   themeMode: z.enum(["LIGHT", "DARK"]).default("LIGHT"),
   avatarUrl: optionalHttpUrl,

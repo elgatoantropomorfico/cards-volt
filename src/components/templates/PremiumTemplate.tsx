@@ -117,16 +117,6 @@ export function PremiumTemplate({
           <ContactAndSocialPills profile={profile} accent={accent} dark={isDark} />
         </div>
 
-        <div className="mt-6 grid grid-cols-3 gap-2">
-          <Stat label="Slug" value={`/${profile.slug}`} accent={accent} dark={isDark} />
-          {profile.location ? (
-            <Stat label="Ubicación" value={profile.location.split(",")[0]} accent={accent} dark={isDark} />
-          ) : (
-            <Stat label="Volt" value="NFC" accent={accent} dark={isDark} />
-          )}
-          <Stat label="Plan" value="Premium" accent={accent} dark={isDark} />
-        </div>
-
         <div className="mt-5">
           <LinkList links={links} accent={accent} variant="premium" dark={isDark} />
         </div>
@@ -140,32 +130,5 @@ export function PremiumTemplate({
         </footer>
       </div>
     </TemplateRoot>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  accent,
-  dark,
-}: {
-  label: string;
-  value: string;
-  accent: string;
-  dark: boolean;
-}) {
-  return (
-    <div
-      className="rounded-2xl border px-2.5 py-2.5 text-left"
-      style={{
-        background: dark ? rgba(accent, 0.08) : rgba(accent, 0.06),
-        borderColor: dark ? rgba(accent, 0.2) : rgba(accent, 0.15),
-      }}
-    >
-      <div className={`text-[10px] uppercase tracking-wider ${dark ? "text-white/60" : "text-slate-500"}`}>{label}</div>
-      <div className={`mt-0.5 truncate text-[12.5px] font-medium ${dark ? "text-white" : "text-slate-900"}`}>
-        {value}
-      </div>
-    </div>
   );
 }

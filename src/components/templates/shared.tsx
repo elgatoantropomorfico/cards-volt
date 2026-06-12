@@ -221,7 +221,7 @@ export function LinkList({
 }: {
   links: ProfileLink[];
   accent: string;
-  variant?: "minimal" | "premium" | "corporate";
+  variant?: "minimal" | "premium" | "corporate" | "noir" | "bloom" | "studio" | "nova" | "vivid";
   dark?: boolean;
 }) {
   const items = customLinksOnly(links);
@@ -231,9 +231,18 @@ export function LinkList({
       {items.map((l) => {
         const Meta = SOCIALS[l.kind] || SOCIALS.OTHER;
         const Icon = Meta.icon;
-        const isPremium = variant === "premium";
-        const isCorp = variant === "corporate";
-        const cls = isPremium
+        const isPremium = variant === "premium" || variant === "vivid";
+        const isCorp = variant === "corporate" || variant === "studio";
+        const isNoir = variant === "noir";
+        const isBloom = variant === "bloom";
+        const isNova = variant === "nova";
+        const cls = isNoir
+          ? "group flex items-center gap-3 border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-medium tracking-wide text-white transition hover:border-white/25"
+          : isBloom
+            ? "group flex items-center gap-3 rounded-2xl border border-rose-200/80 bg-white/90 px-4 py-3 text-sm font-medium text-rose-950 shadow-sm transition hover:shadow-md"
+            : isNova
+              ? "group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white backdrop-blur-md transition hover:bg-white/10"
+              : isPremium
           ? dark
             ? "group flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-medium text-white backdrop-blur transition hover:bg-white/15"
             : "group flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground shadow-soft transition hover:shadow-pop"
@@ -246,8 +255,14 @@ export function LinkList({
             <span
               className="grid h-9 w-9 shrink-0 place-items-center rounded-xl"
               style={{
-                background: isPremium && dark ? "rgba(255,255,255,0.12)" : rgba(accent, 0.1),
-                color: isPremium && dark ? "#fff" : Meta.color,
+                background: isNoir
+                  ? rgba(accent, 0.12)
+                  : isNova
+                    ? rgba(accent, 0.2)
+                    : isPremium && dark
+                      ? "rgba(255,255,255,0.12)"
+                      : rgba(accent, 0.1),
+                color: isPremium && dark ? "#fff" : isNoir ? accent : Meta.color,
               }}
             >
               <Icon className="h-4 w-4" />
@@ -299,7 +314,7 @@ export function ContactActions({
 }: {
   profile: ProfileView;
   accent: string;
-  variant?: "minimal" | "premium" | "corporate";
+  variant?: "minimal" | "premium" | "corporate" | "noir" | "bloom" | "studio" | "nova" | "vivid";
 }) {
   const dark = variant === "premium";
   return (

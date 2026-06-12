@@ -14,6 +14,7 @@ import { ImageUpload } from "@/components/dashboard/ImageUpload";
 import { createUserFull } from "@/server/admin-actions";
 import { cn, normalizeSlug } from "@/lib/utils";
 import { SOCIALS, normalizeLinkUrl, detectKind } from "@/lib/socials";
+import { TEMPLATE_CATALOG } from "@/lib/templates-meta";
 import type { LinkKind, Template, ThemeMode } from "@/lib/profile-types";
 
 type Role = "SUPERADMIN" | "USER";
@@ -294,20 +295,23 @@ export function CreateUserWizard({
                     <div className="grid gap-5">
                       <div className="space-y-2">
                         <Label className="text-xs text-muted-foreground">Plantilla</Label>
-                        <div className="grid grid-cols-3 gap-2">
-                          {(["MINIMAL", "PREMIUM", "CORPORATE"] as Template[]).map((t) => (
+                        <div className="grid max-h-48 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-4">
+                          {TEMPLATE_CATALOG.map((t) => (
                             <button
-                              key={t}
+                              key={t.id}
                               type="button"
-                              onClick={() => setData({ ...data, template: t })}
+                              onClick={() => setData({ ...data, template: t.id, primaryColor: t.defaultColor })}
                               className={cn(
-                                "rounded-xl border bg-card p-3 text-left transition",
-                                data.template === t ? "border-foreground shadow-pop" : "hover:border-foreground/30",
+                                "rounded-xl border bg-card p-2.5 text-left transition",
+                                data.template === t.id ? "border-foreground shadow-pop" : "hover:border-foreground/30",
                               )}
                             >
-                              <div className="text-sm font-medium">{t[0] + t.slice(1).toLowerCase()}</div>
-                              <div className="text-[11px] text-muted-foreground">
-                                {t === "MINIMAL" ? "Linktree refinado" : t === "PREMIUM" ? "HiHello / Popl" : "Ejecutivo"}
+                              <div className="flex items-center gap-1.5">
+                                <span className="grid h-6 w-6 place-items-center rounded-md bg-secondary">{t.icon}</span>
+                                <div className="min-w-0">
+                                  <div className="text-xs font-medium">{t.name}</div>
+                                  <div className="truncate text-[10px] text-muted-foreground">{t.niche}</div>
+                                </div>
                               </div>
                             </button>
                           ))}

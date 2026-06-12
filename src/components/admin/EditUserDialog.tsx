@@ -21,6 +21,7 @@ import {
 } from "@/server/admin-actions";
 import { cn, normalizeSlug } from "@/lib/utils";
 import { SOCIALS, normalizeLinkUrl, detectKind } from "@/lib/socials";
+import { TEMPLATE_CATALOG } from "@/lib/templates-meta";
 import type { LinkKind, Template, ThemeMode } from "@/lib/profile-types";
 
 type Role = "SUPERADMIN" | "USER";
@@ -272,18 +273,21 @@ export function EditUserDialog({
               </TabsContent>
 
               <TabsContent value="appearance" className="mt-0 space-y-4">
-                <div className="grid grid-cols-3 gap-2">
-                  {(["MINIMAL", "PREMIUM", "CORPORATE"] as Template[]).map((t) => (
+                <div className="grid max-h-52 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-4">
+                  {TEMPLATE_CATALOG.map((t) => (
                     <button
-                      key={t}
+                      key={t.id}
                       type="button"
-                      onClick={() => setProfile({ ...profile, template: t })}
+                      onClick={() => setProfile({ ...profile, template: t.id, primaryColor: t.defaultColor })}
                       className={cn(
-                        "rounded-xl border bg-card p-3 text-left text-sm transition",
-                        profile.template === t ? "border-foreground shadow-pop" : "hover:border-foreground/30",
+                        "rounded-xl border bg-card p-2.5 text-left text-sm transition",
+                        profile.template === t.id ? "border-foreground shadow-pop" : "hover:border-foreground/30",
                       )}
                     >
-                      {t[0] + t.slice(1).toLowerCase()}
+                      <div className="flex items-center gap-1.5">
+                        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-secondary text-foreground">{t.icon}</span>
+                        <span className="truncate text-xs font-medium">{t.name}</span>
+                      </div>
                     </button>
                   ))}
                 </div>
