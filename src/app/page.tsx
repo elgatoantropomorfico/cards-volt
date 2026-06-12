@@ -111,7 +111,7 @@ export default function Home() {
           <div className="mx-auto mb-10 max-w-2xl text-center">
             <h2 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">Ocho plantillas. Dos modos. Tu estilo.</h2>
             <p className="mt-3 text-[15px] text-muted-foreground">
-              Previews reales con personas de ejemplo — cambiá plantilla y modo claro/oscuro en vivo desde el editor.
+              Previews reales — probá modo claro y oscuro en cada plantilla.
             </p>
           </div>
           <TemplatesShowcase />
