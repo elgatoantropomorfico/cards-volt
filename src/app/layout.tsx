@@ -22,9 +22,9 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Volt Cards — Tarjetas NFC profesionales",
+  title: "Volt Cards — Tarjetas NFC + QR con perfil digital",
   description:
-    "Tu tarjeta de presentación digital con NFC. Editor en tiempo real, plantillas premium y un solo toque para compartir.",
+    "Comprá tu tarjeta NFC blanca o negra con suscripción anual. Incluye Volt Cards Social Media: perfil editable, plantillas premium y checkout por WhatsApp.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
 };
 
