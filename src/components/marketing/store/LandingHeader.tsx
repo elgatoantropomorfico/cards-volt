@@ -9,14 +9,13 @@ import { ShoppingBag } from "lucide-react";
 const NAV = [
   { href: "#tarjetas", label: "Tarjetas" },
   { href: "#social", label: "Social Media" },
-  { href: "#checkout", label: "Checkout" },
 ];
 
 export function LandingHeader() {
   const { count } = useCart();
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-background/75 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b bg-background/75 backdrop-blur-xl">
       <div className="container flex h-16 items-center justify-between gap-4">
         <Link href="/" className="flex shrink-0 items-center gap-2">
           <span className="grid h-8 w-8 place-items-center rounded-xl bg-foreground text-background shadow-soft">
@@ -40,20 +39,17 @@ export function LandingHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <a href="#checkout" className="relative">
-            <Button variant="outline" size="sm" className="gap-1.5 pr-3">
-              <ShoppingBag className="h-4 w-4" />
-              <span className="hidden sm:inline">Carrito</span>
-              <span
-                className={cn(
-                  "grid min-w-[1.25rem] place-items-center rounded-full px-1 text-[10px] font-bold",
-                  count > 0 ? "bg-foreground text-background" : "bg-secondary text-muted-foreground",
-                )}
-              >
-                {count}
-              </span>
-            </Button>
-          </a>
+          <div className="relative flex items-center gap-1.5 rounded-full bg-secondary/60 px-2.5 py-1.5 text-sm">
+            <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+            <span
+              className={cn(
+                "grid min-w-[1.25rem] place-items-center rounded-full px-1 text-[10px] font-bold",
+                count > 0 ? "bg-foreground text-background" : "text-muted-foreground",
+              )}
+            >
+              {count}
+            </span>
+          </div>
           <a href="#tarjetas" className="hidden sm:block">
             <Button variant="gradient" size="sm">
               Comprar

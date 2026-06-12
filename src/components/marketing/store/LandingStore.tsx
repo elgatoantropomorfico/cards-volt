@@ -3,19 +3,18 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CartProvider } from "./CartContext";
-import { CheckoutSection } from "./CheckoutSection";
-import { FloatingCartBar } from "./FloatingCartBar";
+import { FloatingCartIsland } from "./FloatingCartIsland";
 import { HeroCards3D } from "./HeroCards3D";
 import { IncludedSection } from "./IncludedSection";
 import { LandingHeader } from "./LandingHeader";
 import { ProductSection } from "./ProductSection";
 import { SocialMediaSection } from "./SocialMediaSection";
-import { ArrowRight, MessageCircle, Nfc, Sparkles } from "lucide-react";
+import { ArrowRight, Nfc, Sparkles } from "lucide-react";
 
 export function LandingStore() {
   return (
     <CartProvider>
-      <div className="relative min-h-screen overflow-hidden bg-background pb-20 md:pb-0">
+      <div className="relative min-h-screen overflow-hidden bg-background pb-28">
         <div className="pointer-events-none absolute inset-0 bg-gradient-mesh" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] [mask-image:linear-gradient(black,transparent)]">
           <div className="absolute inset-0 bg-grid-fade bg-[size:40px_40px] opacity-40" />
@@ -24,8 +23,7 @@ export function LandingStore() {
         <LandingHeader />
 
         <main className="relative z-10">
-          {/* Hero — e-commerce */}
-          <section className="container grid items-center gap-10 pb-16 pt-10 md:grid-cols-2 md:gap-12 md:pb-24 md:pt-16">
+          <section className="container grid items-center gap-8 pb-16 pt-10 md:grid-cols-2 md:gap-10 md:pb-24 md:pt-14">
             <div className="order-2 md:order-1">
               <div className="inline-flex items-center gap-2 rounded-full border bg-card/70 px-3 py-1 text-[11px] font-medium text-muted-foreground shadow-soft backdrop-blur">
                 <span className="grid h-4 w-4 place-items-center rounded-full bg-emerald-600 text-white">
@@ -52,12 +50,6 @@ export function LandingStore() {
                     Ver tarjetas <ArrowRight className="h-4 w-4" />
                   </Button>
                 </a>
-                <a href="#checkout">
-                  <Button variant="outline" size="lg" className="h-12 gap-2 px-6">
-                    <MessageCircle className="h-4 w-4" />
-                    Ir al checkout
-                  </Button>
-                </a>
               </div>
 
               <div className="mt-8 flex flex-wrap gap-4 text-[12px] text-muted-foreground">
@@ -70,17 +62,16 @@ export function LandingStore() {
               </div>
             </div>
 
-            <div className="order-1 md:order-2">
+            <div className="order-1 flex items-center justify-center md:order-2">
               <HeroCards3D />
             </div>
           </section>
 
-          <div className="container space-y-20 pb-24 md:space-y-28">
+          <div className="container space-y-20 pb-16 md:space-y-28">
             <ProductSection />
             <IncludedSection />
             <SocialMediaSection />
 
-            {/* How to buy */}
             <section className="scroll-mt-20">
               <div className="rounded-3xl border bg-card/70 p-8 backdrop-blur md:p-10">
                 <h2 className="font-display text-2xl font-semibold tracking-tight md:text-3xl">
@@ -89,7 +80,7 @@ export function LandingStore() {
                 <ol className="mt-6 grid gap-4 md:grid-cols-3">
                   {[
                     { step: "1", title: "Elegí modelo y cantidad", desc: "Tarjeta blanca o negra. Sumá las que necesites al carrito." },
-                    { step: "2", title: "Revisá el total anual", desc: "El checkout muestra el monto completo antes de enviar." },
+                    { step: "2", title: "Revisá el total anual", desc: "La isla flotante muestra el monto antes de enviar." },
                     { step: "3", title: "WhatsApp y listo", desc: "Coordinamos pago, personalización y envío de tu tarjeta." },
                   ].map((item) => (
                     <li key={item.step} className="rounded-2xl border bg-background/60 p-5">
@@ -103,8 +94,6 @@ export function LandingStore() {
                 </ol>
               </div>
             </section>
-
-            <CheckoutSection />
           </div>
         </main>
 
@@ -122,7 +111,7 @@ export function LandingStore() {
           </div>
         </footer>
 
-        <FloatingCartBar />
+        <FloatingCartIsland />
       </div>
     </CartProvider>
   );
