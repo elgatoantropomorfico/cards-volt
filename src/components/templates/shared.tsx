@@ -237,11 +237,17 @@ export function LinkList({
         const isBloom = variant === "bloom";
         const isNova = variant === "nova";
         const cls = isNoir
-          ? "group flex items-center gap-3 border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-medium tracking-wide text-white transition hover:border-white/25"
+          ? dark
+            ? "group flex items-center gap-3 border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-medium tracking-wide text-white transition hover:border-white/25"
+            : "group flex items-center gap-3 border border-neutral-300/80 bg-white/90 px-4 py-3 text-sm font-medium tracking-wide text-neutral-900 shadow-sm transition hover:border-neutral-400"
           : isBloom
-            ? "group flex items-center gap-3 rounded-2xl border border-rose-200/80 bg-white/90 px-4 py-3 text-sm font-medium text-rose-950 shadow-sm transition hover:shadow-md"
+            ? dark
+              ? "group flex items-center gap-3 rounded-2xl border border-rose-900/40 bg-rose-950/30 px-4 py-3 text-sm font-medium text-rose-50 backdrop-blur-md transition hover:bg-rose-950/45"
+              : "group flex items-center gap-3 rounded-2xl border border-rose-200/80 bg-white/90 px-4 py-3 text-sm font-medium text-rose-950 shadow-sm transition hover:shadow-md"
             : isNova
-              ? "group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white backdrop-blur-md transition hover:bg-white/10"
+              ? dark
+                ? "group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white backdrop-blur-md transition hover:bg-white/10"
+                : "group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm font-medium text-slate-900 shadow-sm backdrop-blur-md transition hover:shadow-md"
               : isPremium
           ? dark
             ? "group flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-medium text-white backdrop-blur transition hover:bg-white/15"
@@ -256,13 +262,13 @@ export function LinkList({
               className="grid h-9 w-9 shrink-0 place-items-center rounded-xl"
               style={{
                 background: isNoir
-                  ? rgba(accent, 0.12)
+                  ? rgba(accent, dark ? 0.12 : 0.1)
                   : isNova
-                    ? rgba(accent, 0.2)
+                    ? rgba(accent, dark ? 0.2 : 0.12)
                     : isPremium && dark
                       ? "rgba(255,255,255,0.12)"
                       : rgba(accent, 0.1),
-                color: isPremium && dark ? "#fff" : isNoir ? accent : Meta.color,
+                color: isPremium && dark ? "#fff" : isNoir || isNova ? accent : Meta.color,
               }}
             >
               <Icon className="h-4 w-4" />

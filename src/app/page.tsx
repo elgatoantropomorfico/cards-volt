@@ -63,7 +63,7 @@ export default function Home() {
               de presentarte.
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-pretty text-[17px] leading-relaxed text-muted-foreground">
-              Volt Cards es la plataforma para crear, editar y compartir tu tarjeta digital con NFC. Ocho plantillas premium, editor en vivo, integraciones con redes y mapa.
+              Volt Cards es la plataforma para crear, editar y compartir tu tarjeta digital con NFC. Ocho plantillas con modo claro y oscuro, editor en vivo, integraciones con redes y mapa.
             </p>
             <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
               <Link href="/login">
@@ -82,10 +82,11 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Hero phone — real ProfileRenderer preview */}
-          <div className="relative mx-auto mt-16 flex max-w-5xl justify-center">
+          {/* Hero phones — claro + oscuro */}
+          <div className="relative mx-auto mt-16 flex max-w-5xl items-end justify-center gap-2 sm:gap-4">
             <div className="absolute inset-0 -z-10 bg-gradient-mesh opacity-70 blur-2xl" />
-            <MarketingPhoneMock template="PREMIUM" />
+            <MarketingPhoneMock template="PREMIUM" themeMode="LIGHT" className="hidden scale-[0.88] opacity-90 sm:block" />
+            <MarketingPhoneMock template="PREMIUM" themeMode="DARK" className="relative z-10 sm:-ml-6" />
           </div>
         </section>
 
@@ -97,7 +98,7 @@ export default function Home() {
           </div>
           <div className="grid gap-3 md:grid-cols-3">
             <Feature icon={<Nfc />} title="NFC + QR" desc="Una tarjeta para todos los dispositivos. iPhone, Android y cualquier lector QR." />
-            <Feature icon={<Palette />} title="8 plantillas" desc="Minimal, Premium, Corporate y cinco diseños para nichos: Noir, Bloom, Studio, Nova y Vivid." />
+            <Feature icon={<Palette />} title="8 plantillas × 2 modos" desc="Minimal, Premium, Corporate y cinco diseños para nichos — cada uno en versión clara y oscura." />
             <Feature icon={<Building2 />} title="Panel admin" desc="Creá usuarios, asigná tarjetas NFC y gestioná perfiles desde un solo lugar." />
             <Feature icon={<QrCode />} title="QR descargable" desc="PNG y SVG vectorial para imprimir, signs y materiales gráficos." />
             <Feature icon={<Zap />} title="Editor en vivo" desc="Cambiá perfil, color y plantilla. Tu tarjeta NFC nunca necesita reimpresión." />
@@ -108,8 +109,10 @@ export default function Home() {
         {/* Templates */}
         <section id="templates" className="container pb-24">
           <div className="mx-auto mb-10 max-w-2xl text-center">
-            <h2 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">Ocho plantillas. Cada nicho, su estilo.</h2>
-            <p className="mt-3 text-[15px] text-muted-foreground">Desde ejecutivos hasta creators. Cambialas en vivo desde el editor.</p>
+            <h2 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">Ocho plantillas. Dos modos. Tu estilo.</h2>
+            <p className="mt-3 text-[15px] text-muted-foreground">
+              Previews reales con personas de ejemplo — cambiá plantilla y modo claro/oscuro en vivo desde el editor.
+            </p>
           </div>
           <TemplatesShowcase />
         </section>

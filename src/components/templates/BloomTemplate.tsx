@@ -20,6 +20,7 @@ export function BloomTemplate({
   fluid?: boolean;
 }) {
   const accent = profile.primaryColor || "#DB2777";
+  const isDark = profile.themeMode === "DARK";
   const initials = profile.fullName
     .split(/\s+/)
     .map((p) => p[0])
@@ -29,10 +30,14 @@ export function BloomTemplate({
     .toUpperCase();
 
   return (
-    <TemplateRoot fluid={fluid} className="relative text-rose-950">
+    <TemplateRoot fluid={fluid} className={`relative ${isDark ? "text-rose-50" : "text-rose-950"}`}>
       <div
         className="absolute inset-0"
-        style={{ background: "linear-gradient(165deg, #FFF8F2 0%, #FFE8F0 45%, #FFF5EB 100%)" }}
+        style={{
+          background: isDark
+            ? "linear-gradient(165deg, #2D1B2E 0%, #1a0f1a 50%, #0f0a12 100%)"
+            : "linear-gradient(165deg, #FFF8F2 0%, #FFE8F0 45%, #FFF5EB 100%)",
+        }}
       />
       <div
         className="pointer-events-none absolute -right-16 top-20 h-56 w-56 rounded-full blur-3xl"
@@ -44,7 +49,7 @@ export function BloomTemplate({
       />
 
       <div className="relative mx-auto max-w-md px-5 pb-14 pt-12">
-        <div className="rounded-[2rem] border border-white/80 bg-white/70 p-6 shadow-[0_20px_60px_-20px_rgba(219,39,119,0.2)] backdrop-blur-sm">
+        <div className={`rounded-[2rem] border p-6 shadow-[0_20px_60px_-20px_rgba(219,39,119,0.2)] backdrop-blur-sm ${isDark ? "border-white/10 bg-white/5" : "border-white/80 bg-white/70"}`}>
           <div className="flex flex-col items-center text-center">
             <div
               className="rounded-full p-[3px]"
@@ -64,7 +69,7 @@ export function BloomTemplate({
             </div>
 
             <h1 className="font-display mt-5 text-2xl font-semibold tracking-tight">{profile.fullName}</h1>
-            {profile.jobTitle ? <p className="mt-1 text-sm text-rose-800/70">{profile.jobTitle}</p> : null}
+            {profile.jobTitle ? <p className={`mt-1 text-sm ${isDark ? "text-rose-100/70" : "text-rose-800/70"}`}>{profile.jobTitle}</p> : null}
             {profile.companyName ? (
               <p className="mt-1 text-sm font-medium" style={{ color: accent }}>
                 {profile.companyName}
@@ -73,28 +78,29 @@ export function BloomTemplate({
           </div>
 
           {profile.description ? (
-            <p className="mt-5 text-center text-[13px] leading-relaxed text-rose-900/65">{profile.description}</p>
+            <p className={`mt-5 text-center text-[13px] leading-relaxed ${isDark ? "text-rose-100/65" : "text-rose-900/65"}`}>{profile.description}</p>
           ) : null}
 
           <div className="mt-6">
-            <SaveContactButton profile={profile} accent={accent} className="!shadow-md" />
+            <SaveContactButton profile={profile} accent={accent} dark={isDark} className="!shadow-md" />
           </div>
 
           <div className="mt-4">
-            <ContactAndSocialPills profile={profile} accent={accent} />
+            <ContactAndSocialPills profile={profile} accent={accent} dark={isDark} />
           </div>
         </div>
 
         <div className="mt-5">
-          <LinkList links={links} accent={accent} variant="bloom" />
+          <LinkList links={links} accent={accent} variant="bloom" dark={isDark} />
         </div>
 
         <div className="mt-5">
-          <MapEmbed profile={profile} accent={accent} />
+          <MapEmbed profile={profile} accent={accent} dark={isDark} />
         </div>
 
-        <footer className="mt-10 text-center text-[11px] text-rose-900/40">
-          Powered by <span className="font-medium text-rose-900/60">Volt Cards</span>
+        <footer className={`mt-10 text-center text-[11px] ${isDark ? "text-rose-100/40" : "text-rose-900/40"}`}>
+          Powered by{" "}
+          <span className={`font-medium ${isDark ? "text-rose-100/60" : "text-rose-900/60"}`}>Volt Cards</span>
         </footer>
       </div>
     </TemplateRoot>
