@@ -55,27 +55,26 @@ export function NfcCardVisual({
   size = "default",
   className,
   flippable = true,
-  onFlipChange,
 }: {
   variant: "white" | "black";
   size?: "default" | "hero";
   className?: string;
   flippable?: boolean;
-  onFlipChange?: (flipped: boolean) => void;
 }) {
   const isWhite = variant === "white";
   const [flipped, setFlipped] = React.useState(false);
+  const hoverRef = React.useRef(false);
 
   function handleEnter() {
-    if (!flippable || flipped) return;
+    if (!flippable || hoverRef.current) return;
+    hoverRef.current = true;
     setFlipped(true);
-    onFlipChange?.(true);
   }
 
   function handleLeave() {
-    if (!flippable || !flipped) return;
+    if (!flippable || !hoverRef.current) return;
+    hoverRef.current = false;
     setFlipped(false);
-    onFlipChange?.(false);
   }
 
   return (
@@ -83,15 +82,12 @@ export function NfcCardVisual({
       className={cn(
         "relative shrink-0 select-none [perspective:1200px]",
         size === "hero" ? "w-[248px] sm:w-[272px]" : "w-full max-w-[260px]",
-        !flippable && size === "hero" && "pointer-events-none",
+        flippable && "cursor-default",
         className,
       )}
-      {...(flippable
-        ? { onPointerEnter: handleEnter, onPointerLeave: handleLeave }
-        : {})}
+      {...(flippable ? { onMouseEnter: handleEnter, onMouseLeave: handleLeave } : {})}
     >
-      {/* Hit area extra — evita perder hover durante el giro */}
-      <div className="relative aspect-[1.586/1] w-full p-1">
+      <div className="relative aspect-[1.586/1] w-full">
         <div
           className={cn(
             "pointer-events-none absolute inset-0 rounded-[18px] blur-2xl transition-opacity duration-500",
@@ -103,14 +99,13 @@ export function NfcCardVisual({
         <div
           className={cn(
             "relative h-full w-full rounded-[18px] border p-[1px] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.35)] [transform-style:preserve-3d]",
-            "transition-transform duration-700 ease-out will-change-transform",
+            "transition-transform duration-700 ease-out",
             isWhite
               ? "border-white/80 bg-gradient-to-br from-white via-neutral-100 to-neutral-200"
               : "border-white/10 bg-gradient-to-br from-neutral-700 via-neutral-900 to-black",
           )}
           style={{ transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)" }}
         >
-          {/* Front — logo */}
           <div
             className={cn(
               "absolute inset-0 overflow-hidden rounded-[17px] [backface-visibility:hidden]",
@@ -153,7 +148,6 @@ export function NfcCardVisual({
             />
           </div>
 
-          {/* Back — QR only */}
           <div
             className={cn(
               "absolute inset-0 overflow-hidden rounded-[17px] [backface-visibility:hidden] [transform:rotateY(180deg)]",
