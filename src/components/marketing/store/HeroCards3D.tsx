@@ -7,26 +7,41 @@ import { NfcCardVisual } from "./NfcCardVisual";
 function FloatingCard({
   variant,
   className,
-  floatY,
-  duration,
+  floatY = 0,
+  duration = 6,
   delay = 0,
+  flippable = false,
   onFlipChange,
 }: {
   variant: "white" | "black";
   className?: string;
-  floatY: number;
-  duration: number;
+  floatY?: number;
+  duration?: number;
   delay?: number;
+  flippable?: boolean;
   onFlipChange?: (flipped: boolean) => void;
 }) {
+  const card = (
+    <NfcCardVisual
+      variant={variant}
+      size="hero"
+      flippable={flippable}
+      onFlipChange={onFlipChange}
+    />
+  );
+
   return (
     <div className={className}>
-      <motion.div
-        animate={{ y: [0, floatY, 0] }}
-        transition={{ duration, repeat: Infinity, ease: "easeInOut", delay }}
-      >
-        <NfcCardVisual variant={variant} size="hero" onFlipChange={onFlipChange} />
-      </motion.div>
+      {floatY !== 0 ? (
+        <motion.div
+          animate={{ y: [0, floatY, 0] }}
+          transition={{ duration, repeat: Infinity, ease: "easeInOut", delay }}
+        >
+          {card}
+        </motion.div>
+      ) : (
+        card
+      )}
     </div>
   );
 }
@@ -41,8 +56,8 @@ export function HeroCards3D() {
   const springX = useSpring(mouseX, { stiffness: 60, damping: 28 });
   const springY = useSpring(mouseY, { stiffness: 60, damping: 28 });
 
-  const rotateY = useTransform(springX, [-0.5, 0.5], [-6, 6]);
-  const rotateX = useTransform(springY, [-0.5, 0.5], [5, -5]);
+  const rotateY = useTransform(springX, [-0.5, 0.5], [-5, 5]);
+  const rotateX = useTransform(springY, [-0.5, 0.5], [4, -4]);
 
   function onCardFlipChange(flipped: boolean) {
     cardHoverRef.current = Math.max(0, cardHoverRef.current + (flipped ? 1 : -1));
@@ -66,6 +81,8 @@ export function HeroCards3D() {
   function onMouseLeave() {
     mouseX.set(0);
     mouseY.set(0);
+    cardHoverRef.current = 0;
+    setParallaxPaused(false);
   }
 
   return (
@@ -82,18 +99,19 @@ export function HeroCards3D() {
           style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
           className="relative flex h-[280px] w-[min(100%,460px)] max-w-[460px] items-center justify-center"
         >
+          {/* Blanca: decorativa, sin flip ni interacción */}
           <FloatingCard
             variant="white"
-            floatY={-8}
-            duration={6}
-            onFlipChange={onCardFlipChange}
+            floatY={-6}
+            duration={7}
+            flippable={false}
             className="absolute left-[2%] top-1/2 z-10 -translate-y-[54%] -rotate-[12deg] sm:left-[6%]"
           />
+          {/* Negra: única interactiva en el hero */}
           <FloatingCard
             variant="black"
-            floatY={10}
-            duration={5.5}
-            delay={0.35}
+            floatY={0}
+            flippable
             onFlipChange={onCardFlipChange}
             className="absolute right-[2%] top-1/2 z-20 -translate-y-[46%] rotate-[10deg] sm:right-[6%]"
           />

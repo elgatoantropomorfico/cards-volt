@@ -54,22 +54,26 @@ export function NfcCardVisual({
   variant,
   size = "default",
   className,
+  flippable = true,
   onFlipChange,
 }: {
   variant: "white" | "black";
   size?: "default" | "hero";
   className?: string;
+  flippable?: boolean;
   onFlipChange?: (flipped: boolean) => void;
 }) {
   const isWhite = variant === "white";
   const [flipped, setFlipped] = React.useState(false);
 
   function handleEnter() {
+    if (!flippable || flipped) return;
     setFlipped(true);
     onFlipChange?.(true);
   }
 
   function handleLeave() {
+    if (!flippable || !flipped) return;
     setFlipped(false);
     onFlipChange?.(false);
   }
@@ -79,10 +83,12 @@ export function NfcCardVisual({
       className={cn(
         "relative shrink-0 select-none [perspective:1200px]",
         size === "hero" ? "w-[248px] sm:w-[272px]" : "w-full max-w-[260px]",
+        !flippable && size === "hero" && "pointer-events-none",
         className,
       )}
-      onPointerEnter={handleEnter}
-      onPointerLeave={handleLeave}
+      {...(flippable
+        ? { onPointerEnter: handleEnter, onPointerLeave: handleLeave }
+        : {})}
     >
       {/* Hit area extra — evita perder hover durante el giro */}
       <div className="relative aspect-[1.586/1] w-full p-1">
