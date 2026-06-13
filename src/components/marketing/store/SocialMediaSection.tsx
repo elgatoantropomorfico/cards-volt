@@ -72,7 +72,7 @@ export function SocialMediaSection() {
             Probá modo claro y oscuro en cada diseño — incluidos en tu suscripción.
           </p>
         </div>
-        <div id="templates" className="scroll-mt-24">
+        <div id="templates" className="scroll-mt-24 overflow-hidden">
           <TemplatesShowcase />
         </div>
       </div>

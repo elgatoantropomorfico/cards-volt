@@ -37,7 +37,7 @@ function ProductCard({ productId }: { productId: ProductId }) {
           product.variant === "white" ? "bg-neutral-100/80" : "bg-neutral-950",
         )}
       >
-        <NfcCardVisual variant={product.variant} className="w-[min(100%,260px)] transition duration-500 group-hover:scale-[1.02]" />
+        <NfcCardVisual variant={product.variant} flippable={false} className="w-[min(100%,260px)] transition duration-500 group-hover:scale-[1.02]" />
       </div>
 
       <div className="flex flex-1 flex-col p-6 pt-5">
