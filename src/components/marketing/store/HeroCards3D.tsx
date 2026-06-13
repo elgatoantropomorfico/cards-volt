@@ -4,6 +4,31 @@ import * as React from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { NfcCardVisual } from "./NfcCardVisual";
 
+function FloatingCard({
+  variant,
+  className,
+  floatY,
+  duration,
+  delay = 0,
+}: {
+  variant: "white" | "black";
+  className?: string;
+  floatY: number;
+  duration: number;
+  delay?: number;
+}) {
+  return (
+    <div className={className}>
+      <motion.div
+        animate={{ y: [0, floatY, 0] }}
+        transition={{ duration, repeat: Infinity, ease: "easeInOut", delay }}
+      >
+        <NfcCardVisual variant={variant} size="hero" />
+      </motion.div>
+    </div>
+  );
+}
+
 export function HeroCards3D() {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const mouseX = useMotionValue(0);
@@ -28,38 +53,32 @@ export function HeroCards3D() {
   }
 
   return (
-    <div className="flex w-full items-center justify-center">
+    <div className="flex w-full items-center justify-center py-2">
       <div
         ref={containerRef}
-        className="relative flex h-[300px] w-full max-w-[440px] items-center justify-center sm:h-[320px] [perspective:1400px]"
+        className="relative flex h-[min(340px,72vw)] w-full max-w-[520px] items-center justify-center [perspective:1400px] sm:h-[360px]"
         onMouseMove={onMouseMove}
         onMouseLeave={onMouseLeave}
       >
-        <div className="pointer-events-none absolute inset-0 mx-auto max-w-[360px] rounded-full bg-gradient-mesh opacity-45 blur-3xl" />
+        <div className="pointer-events-none absolute inset-0 mx-auto max-w-[420px] rounded-full bg-gradient-mesh opacity-50 blur-3xl" />
 
         <motion.div
           style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-          className="relative flex items-center justify-center"
+          className="relative flex h-[280px] w-[min(100%,460px)] max-w-[460px] items-center justify-center"
         >
-          <div className="relative h-[200px] w-[min(100%,380px)] max-w-[380px]">
-            <motion.div
-              className="absolute left-[4%] top-1/2 z-10 w-[52%] max-w-[220px] -translate-y-[52%] -rotate-[11deg]"
-              style={{ transformStyle: "preserve-3d" }}
-              animate={{ y: [0, -6, 0] }}
-              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <NfcCardVisual variant="white" />
-            </motion.div>
-
-            <motion.div
-              className="absolute right-[4%] top-1/2 z-20 w-[52%] max-w-[220px] -translate-y-[48%] rotate-[9deg]"
-              style={{ transformStyle: "preserve-3d" }}
-              animate={{ y: [0, 8, 0] }}
-              transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
-            >
-              <NfcCardVisual variant="black" />
-            </motion.div>
-          </div>
+          <FloatingCard
+            variant="white"
+            floatY={-8}
+            duration={6}
+            className="absolute left-[2%] top-1/2 z-10 -translate-y-[54%] -rotate-[12deg] sm:left-[6%]"
+          />
+          <FloatingCard
+            variant="black"
+            floatY={10}
+            duration={5.5}
+            delay={0.35}
+            className="absolute right-[2%] top-1/2 z-20 -translate-y-[46%] rotate-[10deg] sm:right-[6%]"
+          />
         </motion.div>
       </div>
     </div>

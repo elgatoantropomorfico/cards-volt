@@ -20,7 +20,7 @@ const QR_GRID = [
 function QrFace({ variant }: { variant: "white" | "black" }) {
   const isWhite = variant === "white";
   return (
-    <div className="flex h-full w-full items-center justify-center p-8">
+    <div className="flex h-full w-full items-center justify-center p-6 sm:p-8">
       <div
         className={cn(
           "grid aspect-square w-[62%] grid-cols-11 grid-rows-11 gap-[2px] rounded-lg p-2",
@@ -51,9 +51,11 @@ function QrFace({ variant }: { variant: "white" | "black" }) {
 
 export function NfcCardVisual({
   variant,
+  size = "default",
   className,
 }: {
   variant: "white" | "black";
+  size?: "default" | "hero";
   className?: string;
 }) {
   const isWhite = variant === "white";
@@ -61,20 +63,21 @@ export function NfcCardVisual({
   return (
     <div
       className={cn(
-        "group/card relative aspect-[1.586/1] w-full max-w-[260px] select-none [perspective:1200px]",
+        "group/card relative aspect-[1.586/1] shrink-0 select-none [perspective:1200px]",
+        size === "hero" ? "w-[248px] sm:w-[272px]" : "w-full max-w-[260px]",
         className,
       )}
     >
       <div
         className={cn(
-          "absolute inset-0 rounded-[18px] blur-2xl transition-opacity duration-500 group-hover/card:opacity-80",
+          "pointer-events-none absolute inset-0 rounded-[18px] blur-2xl transition-opacity duration-500 group-hover/card:opacity-80",
           isWhite ? "bg-neutral-300/35" : "bg-violet-900/25",
         )}
       />
 
       <div
         className={cn(
-          "relative h-full w-full rounded-[18px] border p-[1px] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.35)] transition-transform duration-700 [transform-style:preserve-3d] group-hover/card:[transform:rotateY(180deg)]",
+          "relative h-full w-full rounded-[18px] border p-[1px] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.35)] transition-transform duration-700 ease-out [transform-style:preserve-3d] group-hover/card:[transform:rotateY(180deg)]",
           isWhite
             ? "border-white/80 bg-gradient-to-br from-white via-neutral-100 to-neutral-200"
             : "border-white/10 bg-gradient-to-br from-neutral-700 via-neutral-900 to-black",
@@ -100,7 +103,7 @@ export function NfcCardVisual({
           <div className="relative flex h-full flex-col items-center justify-center gap-3">
             <span
               className={cn(
-                "grid h-14 w-14 place-items-center rounded-2xl font-display text-2xl font-bold shadow-soft",
+                "grid h-14 w-14 place-items-center rounded-2xl font-display text-2xl font-bold shadow-soft sm:h-16 sm:w-16 sm:text-3xl",
                 isWhite ? "bg-foreground text-background" : "bg-white text-neutral-950",
               )}
             >
@@ -108,7 +111,7 @@ export function NfcCardVisual({
             </span>
             <p
               className={cn(
-                "font-display text-sm font-semibold tracking-tight",
+                "font-display text-sm font-semibold tracking-tight sm:text-base",
                 isWhite ? "text-neutral-800" : "text-white/90",
               )}
             >
