@@ -10,12 +10,14 @@ function FloatingCard({
   floatY,
   duration,
   delay = 0,
+  onFlipChange,
 }: {
   variant: "white" | "black";
   className?: string;
   floatY: number;
   duration: number;
   delay?: number;
+  onFlipChange?: (flipped: boolean) => void;
 }) {
   return (
     <div className={className}>
@@ -23,7 +25,7 @@ function FloatingCard({
         animate={{ y: [0, floatY, 0] }}
         transition={{ duration, repeat: Infinity, ease: "easeInOut", delay }}
       >
-        <NfcCardVisual variant={variant} size="hero" />
+        <NfcCardVisual variant={variant} size="hero" onFlipChange={onFlipChange} />
       </motion.div>
     </div>
   );
@@ -31,15 +33,29 @@ function FloatingCard({
 
 export function HeroCards3D() {
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const cardHoverRef = React.useRef(0);
+  const [parallaxPaused, setParallaxPaused] = React.useState(false);
+
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
-  const springX = useSpring(mouseX, { stiffness: 80, damping: 24 });
-  const springY = useSpring(mouseY, { stiffness: 80, damping: 24 });
+  const springX = useSpring(mouseX, { stiffness: 60, damping: 28 });
+  const springY = useSpring(mouseY, { stiffness: 60, damping: 28 });
 
-  const rotateY = useTransform(springX, [-0.5, 0.5], [-10, 10]);
-  const rotateX = useTransform(springY, [-0.5, 0.5], [8, -8]);
+  const rotateY = useTransform(springX, [-0.5, 0.5], [-6, 6]);
+  const rotateX = useTransform(springY, [-0.5, 0.5], [5, -5]);
+
+  function onCardFlipChange(flipped: boolean) {
+    cardHoverRef.current = Math.max(0, cardHoverRef.current + (flipped ? 1 : -1));
+    const paused = cardHoverRef.current > 0;
+    setParallaxPaused(paused);
+    if (paused) {
+      mouseX.set(0);
+      mouseY.set(0);
+    }
+  }
 
   function onMouseMove(e: React.MouseEvent) {
+    if (parallaxPaused) return;
     const el = containerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -70,6 +86,7 @@ export function HeroCards3D() {
             variant="white"
             floatY={-8}
             duration={6}
+            onFlipChange={onCardFlipChange}
             className="absolute left-[2%] top-1/2 z-10 -translate-y-[54%] -rotate-[12deg] sm:left-[6%]"
           />
           <FloatingCard
@@ -77,6 +94,7 @@ export function HeroCards3D() {
             floatY={10}
             duration={5.5}
             delay={0.35}
+            onFlipChange={onCardFlipChange}
             className="absolute right-[2%] top-1/2 z-20 -translate-y-[46%] rotate-[10deg] sm:right-[6%]"
           />
         </motion.div>
