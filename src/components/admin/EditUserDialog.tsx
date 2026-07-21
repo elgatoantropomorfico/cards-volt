@@ -68,6 +68,8 @@ export function EditUserDialog({
     themeMode: "LIGHT" as ThemeMode,
     avatarUrl: "" as string | null,
     coverUrl: "" as string | null,
+    alias: "",
+    showSaveContact: true,
   });
 
   const [links, setLinks] = React.useState<LinkRow[]>([]);
@@ -110,6 +112,8 @@ export function EditUserDialog({
           themeMode: res.profile.themeMode,
           avatarUrl: res.profile.avatarUrl,
           coverUrl: res.profile.coverUrl,
+          alias: res.profile.alias ?? "",
+          showSaveContact: res.profile.showSaveContact !== false,
         });
         setLinks(res.profile.links);
       } else {
@@ -153,6 +157,8 @@ export function EditUserDialog({
       twitter: profile.twitter || null,
       avatarUrl: profile.avatarUrl || null,
       coverUrl: profile.coverUrl || null,
+      alias: profile.alias || null,
+      showSaveContact: profile.showSaveContact,
       template: profile.template,
       primaryColor: profile.primaryColor,
       themeMode: profile.themeMode,
@@ -259,6 +265,16 @@ export function EditUserDialog({
                   <Field label="Ubicación"><Input value={profile.location} onChange={(e) => setProfile({ ...profile, location: e.target.value })} /></Field>
                 </div>
                 <Field label="Bio"><Textarea rows={3} value={profile.description} onChange={(e) => setProfile({ ...profile, description: e.target.value })} /></Field>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Alias"><Input value={profile.alias} onChange={(e) => setProfile({ ...profile, alias: e.target.value })} placeholder="@mi.alias" /></Field>
+                  <div className="flex items-center justify-between rounded-xl border bg-secondary/30 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium">Botón guardar contacto</p>
+                      <p className="text-xs text-muted-foreground">Off = ícono en pills</p>
+                    </div>
+                    <Switch checked={profile.showSaveContact} onCheckedChange={(v) => setProfile({ ...profile, showSaveContact: v })} />
+                  </div>
+                </div>
                 <div className="grid gap-4 sm:grid-cols-3">
                   <Field label="Instagram"><Input value={profile.instagram} onChange={(e) => setProfile({ ...profile, instagram: e.target.value })} /></Field>
                   <Field label="LinkedIn"><Input value={profile.linkedin} onChange={(e) => setProfile({ ...profile, linkedin: e.target.value })} /></Field>

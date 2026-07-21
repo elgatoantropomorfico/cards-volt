@@ -2,7 +2,7 @@
 
 import type { ProfileLink, ProfileView } from "@/lib/profile-types";
 import {
-  SaveContactButton,
+  ContactCtaBlock,
   ContactAndSocialPills,
   LinkList,
   MapEmbed,
@@ -80,11 +80,11 @@ export function VividTemplate({
         ) : null}
 
         <div className="mt-7 w-full">
-          <SaveContactButton
+          <ContactCtaBlock
             profile={profile}
             accent={isDark ? "#ffffff" : accent}
             dark={isDark}
-            className={isDark ? "!text-neutral-900 !shadow-lg" : "!shadow-md"}
+            saveClassName={isDark ? "!text-neutral-900 !shadow-lg" : "!shadow-md"}
           />
         </div>
 

@@ -2,7 +2,7 @@
 
 import type { ProfileLink, ProfileView } from "@/lib/profile-types";
 import {
-  SaveContactButton,
+  ContactCtaBlock,
   ContactAndSocialPills,
   LinkList,
   MapEmbed,
@@ -78,7 +78,7 @@ export function NoirTemplate({
         <div className="mx-auto mt-8 h-px w-full max-w-[200px]" style={{ background: rgba(accent, 0.35) }} />
 
         <div className="mt-8">
-          <SaveContactButton profile={profile} accent={accent} dark={isDark} className="!rounded-none tracking-wide" />
+          <ContactCtaBlock profile={profile} accent={accent} dark={isDark} saveClassName="!rounded-none tracking-wide" />
         </div>
 
         <div className="mt-5">

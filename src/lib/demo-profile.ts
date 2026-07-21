@@ -132,5 +132,7 @@ export function demoProfileFor(template: Template, themeMode: ThemeMode = "LIGHT
     themeMode,
     avatarUrl: null,
     coverUrl: null,
+    alias: null,
+    showSaveContact: true,
   };
 }

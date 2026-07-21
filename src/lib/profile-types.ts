@@ -71,6 +71,8 @@ export type ProfileView = {
   youtube?: string | null;
   tiktok?: string | null;
   github?: string | null;
+  alias?: string | null;
+  showSaveContact?: boolean;
   template: Template;
   primaryColor: string;
   themeMode: ThemeMode;

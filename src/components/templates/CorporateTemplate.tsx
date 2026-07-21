@@ -3,7 +3,7 @@
 import * as React from "react";
 import type { ProfileLink, ProfileView } from "@/lib/profile-types";
 import {
-  SaveContactButton,
+  ContactCtaBlock,
   ContactAndSocialPills,
   LinkList,
   MapEmbed,
@@ -94,7 +94,7 @@ export function CorporateTemplate({
 
         <section className="mt-8 space-y-3">
           <h2 className={`text-[10px] font-semibold uppercase tracking-[0.2em] ${isDark ? "text-slate-500" : "text-slate-500"}`}>Contacto</h2>
-          <SaveContactButton profile={profile} accent={accent} dark={isDark} />
+          <ContactCtaBlock profile={profile} accent={accent} dark={isDark} />
           <ContactAndSocialPills profile={profile} accent={accent} dark={isDark} align="start" />
         </section>
 

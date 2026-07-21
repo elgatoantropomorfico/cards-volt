@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toaster";
 import { ImageUpload } from "@/components/dashboard/ImageUpload";
 import { createUserFull } from "@/server/admin-actions";
@@ -61,6 +62,8 @@ export function CreateUserWizard({
     twitter: "",
     avatarUrl: "" as string | null,
     coverUrl: "" as string | null,
+    alias: "",
+    showSaveContact: true,
     template: "MINIMAL" as Template,
     primaryColor: "#7C3AED",
     themeMode: "LIGHT" as ThemeMode,
@@ -86,6 +89,8 @@ export function CreateUserWizard({
       twitter: "",
       avatarUrl: "",
       coverUrl: "",
+      alias: "",
+      showSaveContact: true,
       template: "MINIMAL",
       primaryColor: "#7C3AED",
       themeMode: "LIGHT",
@@ -150,6 +155,8 @@ export function CreateUserWizard({
         twitter: data.twitter || null,
         avatarUrl: data.avatarUrl || null,
         coverUrl: data.coverUrl || null,
+        alias: data.alias || null,
+        showSaveContact: data.showSaveContact,
         template: data.template,
         primaryColor: data.primaryColor,
         themeMode: data.themeMode,
@@ -283,6 +290,16 @@ export function CreateUserWizard({
                       <Field label="Bio">
                         <Textarea rows={3} value={data.description} onChange={(e) => setData({ ...data, description: e.target.value })} />
                       </Field>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <Field label="Alias"><Input value={data.alias} onChange={(e) => setData({ ...data, alias: e.target.value })} placeholder="@mi.alias" /></Field>
+                        <div className="flex items-center justify-between rounded-xl border bg-secondary/30 px-4 py-3">
+                          <div>
+                            <p className="text-sm font-medium">Botón guardar contacto</p>
+                            <p className="text-xs text-muted-foreground">Off = ícono en pills</p>
+                          </div>
+                          <Switch checked={data.showSaveContact} onCheckedChange={(v) => setData({ ...data, showSaveContact: v })} />
+                        </div>
+                      </div>
                       <div className="grid gap-4 sm:grid-cols-3">
                         <Field label="Instagram"><Input value={data.instagram} onChange={(e) => setData({ ...data, instagram: e.target.value })} placeholder="@user" /></Field>
                         <Field label="LinkedIn"><Input value={data.linkedin} onChange={(e) => setData({ ...data, linkedin: e.target.value })} placeholder="linkedin.com/in/user" /></Field>

@@ -2,7 +2,7 @@
 
 import type { ProfileLink, ProfileView } from "@/lib/profile-types";
 import {
-  SaveContactButton,
+  ContactCtaBlock,
   ContactAndSocialPills,
   LinkList,
   MapEmbed,
@@ -83,7 +83,7 @@ export function NovaTemplate({
           ) : null}
 
           <div className="mt-5">
-            <SaveContactButton profile={profile} accent={accent} dark={isDark} />
+            <ContactCtaBlock profile={profile} accent={accent} dark={isDark} />
           </div>
 
           <div className="mt-4">

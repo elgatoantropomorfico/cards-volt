@@ -26,6 +26,8 @@ export function profileToView(p: DbProfile): ProfileView {
     youtube: p.youtube,
     tiktok: p.tiktok,
     github: p.github,
+    alias: p.alias,
+    showSaveContact: p.showSaveContact,
     template: p.template,
     primaryColor: p.primaryColor,
     themeMode: p.themeMode,

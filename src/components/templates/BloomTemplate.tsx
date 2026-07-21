@@ -2,7 +2,7 @@
 
 import type { ProfileLink, ProfileView } from "@/lib/profile-types";
 import {
-  SaveContactButton,
+  ContactCtaBlock,
   ContactAndSocialPills,
   LinkList,
   MapEmbed,
@@ -82,7 +82,7 @@ export function BloomTemplate({
           ) : null}
 
           <div className="mt-6">
-            <SaveContactButton profile={profile} accent={accent} dark={isDark} className="!shadow-md" />
+            <ContactCtaBlock profile={profile} accent={accent} dark={isDark} saveClassName="!shadow-md" />
           </div>
 
           <div className="mt-4">

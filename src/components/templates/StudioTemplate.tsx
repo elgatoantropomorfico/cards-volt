@@ -2,7 +2,7 @@
 
 import type { ProfileLink, ProfileView } from "@/lib/profile-types";
 import {
-  SaveContactButton,
+  ContactCtaBlock,
   ContactAndSocialPills,
   LinkList,
   MapEmbed,
@@ -71,7 +71,7 @@ export function StudioTemplate({
 
         <section className="mt-8 space-y-3">
           <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-400">Contacto</h2>
-          <SaveContactButton profile={profile} accent={accent} dark={isDark} className="!rounded-lg" />
+          <ContactCtaBlock profile={profile} accent={accent} dark={isDark} saveClassName="!rounded-lg" />
           <ContactAndSocialPills profile={profile} accent={accent} dark={isDark} align="start" />
         </section>
 

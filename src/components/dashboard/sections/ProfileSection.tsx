@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "@/components/ui/toaster";
 import { normalizeSlug } from "@/lib/utils";
@@ -77,6 +78,8 @@ export function ProfileSection({
       youtube: profile.youtube ?? "",
       tiktok: profile.tiktok ?? "",
       github: profile.github ?? "",
+      alias: profile.alias ?? "",
+      showSaveContact: profile.showSaveContact !== false,
     });
     setPending(false);
     if (res.ok) {
@@ -156,6 +159,34 @@ export function ProfileSection({
               onChange={(e) => onChange({ description: e.target.value })}
               placeholder="Una frase corta sobre vos o tu rol."
             />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Alias (opcional)">
+              <Input
+                value={profile.alias ?? ""}
+                onChange={(e) => onChange({ alias: e.target.value })}
+                placeholder="@mi.alias"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Se muestra debajo de “Guardar contacto” y se copia al tocarlo.
+              </p>
+            </Field>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Botón guardar contacto</Label>
+              <div className="flex items-center justify-between gap-3 rounded-xl border bg-background px-3 py-3 shadow-soft">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Mostrar botón grande</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Si lo apagás, queda como ícono junto a WhatsApp / teléfono / email.
+                  </p>
+                </div>
+                <Switch
+                  checked={profile.showSaveContact !== false}
+                  onCheckedChange={(v) => onChange({ showSaveContact: v })}
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

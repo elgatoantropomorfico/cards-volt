@@ -3,7 +3,7 @@
 import * as React from "react";
 import type { ProfileLink, ProfileView } from "@/lib/profile-types";
 import {
-  SaveContactButton,
+  ContactCtaBlock,
   ContactAndSocialPills,
   LinkList,
   MapEmbed,
@@ -82,7 +82,7 @@ export function MinimalTemplate({
         ) : null}
 
         <div className="w-full">
-          <SaveContactButton profile={profile} accent={accent} dark={isDark} />
+          <ContactCtaBlock profile={profile} accent={accent} dark={isDark} />
         </div>
 
         <ContactAndSocialPills profile={profile} accent={accent} dark={isDark} />

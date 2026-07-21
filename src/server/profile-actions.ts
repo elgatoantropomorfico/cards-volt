@@ -32,6 +32,8 @@ const ProfileSchema = z.object({
   youtube: z.string().max(200).optional().nullable(),
   tiktok: z.string().max(80).optional().nullable(),
   github: z.string().max(200).optional().nullable(),
+  alias: z.string().max(80).optional().nullable(),
+  showSaveContact: z.boolean().optional(),
 });
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -112,6 +114,8 @@ export async function updateProfile(input: z.infer<typeof ProfileSchema>): Promi
       youtube: emptyToNull(d.youtube),
       tiktok: emptyToNull(d.tiktok),
       github: emptyToNull(d.github),
+      alias: emptyToNull(d.alias),
+      showSaveContact: d.showSaveContact ?? true,
     },
   });
 

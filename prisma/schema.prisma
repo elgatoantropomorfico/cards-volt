@@ -136,6 +136,7 @@ model Profile {
   location     String?
   locationLat  Float?
   locationLng  Float?
+  alias        String?
 
   instagram    String?
   linkedin     String?
@@ -145,9 +146,10 @@ model Profile {
   tiktok       String?
   github       String?
 
-  template     Template @default(MINIMAL)
-  primaryColor String   @default("#0F172A")
-  themeMode    ThemeMode @default(LIGHT)
+  template           Template  @default(MINIMAL)
+  primaryColor       String    @default("#0F172A")
+  themeMode          ThemeMode @default(LIGHT)
+  showSaveContact    Boolean   @default(true)
 
   links        Link[]
   card         NfcCard?
