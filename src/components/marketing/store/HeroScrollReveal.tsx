@@ -3,8 +3,10 @@
 import * as React from "react";
 import { HERO_REVEAL_FRAME_COUNT, heroRevealFrameSrc } from "@/lib/hero-reveal";
 
-/** First stretch of the pin: scrub the 4s sequence. Rest is the hero awakening. */
-const SCRUB_END = 0.55;
+/** Pin acts, in order: scrub frames → fill white → hold white → hero fades in. */
+const SCRUB_END = 0.46;
+const WHITE_FADE_END = 0.64;
+const WHITE_HOLD_END = 0.72;
 
 function coverDraw(
   ctx: CanvasRenderingContext2D,
@@ -73,7 +75,7 @@ export function HeroScrollReveal({ children }: { children: React.ReactNode }) {
 
       if (reduced.matches) {
         lastIndexRef.current = HERO_REVEAL_FRAME_COUNT - 1;
-        sticky.style.setProperty("--video-opacity", "0");
+        sticky.style.setProperty("--white-opacity", "1");
         sticky.style.setProperty("--hero-opacity", "1");
         if (heroRef.current) heroRef.current.style.pointerEvents = "auto";
         draw(HERO_REVEAL_FRAME_COUNT - 1);
@@ -85,7 +87,7 @@ export function HeroScrollReveal({ children }: { children: React.ReactNode }) {
       const progress = total > 0 ? scrolled / total : 0;
 
       let index: number;
-      let videoOpacity: number;
+      let whiteOpacity: number;
       let heroOpacity: number;
 
       if (progress <= SCRUB_END) {
@@ -93,16 +95,22 @@ export function HeroScrollReveal({ children }: { children: React.ReactNode }) {
           HERO_REVEAL_FRAME_COUNT - 1,
           Math.round((progress / SCRUB_END) * (HERO_REVEAL_FRAME_COUNT - 1)),
         );
-        videoOpacity = 1;
+        whiteOpacity = 0;
+        heroOpacity = 0;
+      } else if (progress <= WHITE_HOLD_END) {
+        index = HERO_REVEAL_FRAME_COUNT - 1;
+        whiteOpacity =
+          progress <= WHITE_FADE_END
+            ? (progress - SCRUB_END) / (WHITE_FADE_END - SCRUB_END)
+            : 1;
         heroOpacity = 0;
       } else {
         index = HERO_REVEAL_FRAME_COUNT - 1;
-        const t = Math.min(1, (progress - SCRUB_END) / (1 - SCRUB_END));
-        videoOpacity = 1 - t;
-        heroOpacity = t;
+        whiteOpacity = 1;
+        heroOpacity = Math.min(1, (progress - WHITE_HOLD_END) / (1 - WHITE_HOLD_END));
       }
 
-      sticky.style.setProperty("--video-opacity", String(videoOpacity));
+      sticky.style.setProperty("--white-opacity", String(whiteOpacity));
       sticky.style.setProperty("--hero-opacity", String(heroOpacity));
       if (heroRef.current) {
         heroRef.current.style.pointerEvents = heroOpacity > 0.2 ? "auto" : "none";
@@ -168,12 +176,9 @@ export function HeroScrollReveal({ children }: { children: React.ReactNode }) {
       <div
         ref={stickyRef}
         className="sticky top-0 h-dvh w-full overflow-hidden bg-background"
-        style={{ "--video-opacity": 1, "--hero-opacity": 0 } as React.CSSProperties}
+        style={{ "--white-opacity": 0, "--hero-opacity": 0 } as React.CSSProperties}
       >
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{ opacity: "var(--video-opacity)" }}
-        >
+        <div className="pointer-events-none absolute inset-0">
           <img
             src={heroRevealFrameSrc(0)}
             alt=""
@@ -185,9 +190,14 @@ export function HeroScrollReveal({ children }: { children: React.ReactNode }) {
             className="absolute inset-0 h-full w-full"
             style={{ opacity: ready ? 1 : 0 }}
           />
-          {/* Edge only — fades with the video, never fills the viewport */}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[28%] bg-gradient-to-t from-white via-white/55 to-transparent" />
         </div>
+
+        {/* Full white beat — hero does not start until this is solid */}
+        <div
+          className="pointer-events-none absolute inset-0 bg-white"
+          style={{ opacity: "var(--white-opacity)" }}
+        />
 
         <div
           ref={heroRef}
