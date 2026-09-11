@@ -1,7 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { HERO_REVEAL_FRAME_COUNT, heroRevealFrameSrc } from "@/lib/hero-reveal";
+import {
+  type HeroRevealVariant,
+  heroRevealConfig,
+  heroRevealFrameSrc,
+} from "@/lib/hero-reveal";
 
 /** Pin acts, in order: scrub frames → fill white → hold white → hero fades in. */
 const SCRUB_END = 0.46;
@@ -30,7 +34,14 @@ function coverDraw(
   ctx.drawImage(img, dx, dy, dw, dh);
 }
 
-export function HeroScrollReveal({ children }: { children: React.ReactNode }) {
+export function HeroScrollReveal({
+  children,
+  variant = "mobile",
+}: {
+  children: React.ReactNode;
+  variant?: HeroRevealVariant;
+}) {
+  const { count, skipMedia, wrapClass } = heroRevealConfig(variant);
   const wrapRef = React.useRef<HTMLDivElement>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const stickyRef = React.useRef<HTMLDivElement>(null);
@@ -41,12 +52,12 @@ export function HeroScrollReveal({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = React.useState(false);
 
   React.useEffect(() => {
-    const desktop = window.matchMedia("(min-width: 768px)");
+    const skip = window.matchMedia(skipMedia);
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (desktop.matches) return;
+    if (skip.matches) return;
 
     let cancelled = false;
-    const frames: (HTMLImageElement | null)[] = Array.from({ length: HERO_REVEAL_FRAME_COUNT }, () => null);
+    const frames: (HTMLImageElement | null)[] = Array.from({ length: count }, () => null);
     framesRef.current = frames;
 
     const draw = (index: number) => {
@@ -74,11 +85,11 @@ export function HeroScrollReveal({ children }: { children: React.ReactNode }) {
       if (!wrap || !sticky) return;
 
       if (reduced.matches) {
-        lastIndexRef.current = HERO_REVEAL_FRAME_COUNT - 1;
+        lastIndexRef.current = count - 1;
         sticky.style.setProperty("--white-opacity", "1");
         sticky.style.setProperty("--hero-opacity", "1");
         if (heroRef.current) heroRef.current.style.pointerEvents = "auto";
-        draw(HERO_REVEAL_FRAME_COUNT - 1);
+        draw(count - 1);
         return;
       }
 
@@ -91,21 +102,18 @@ export function HeroScrollReveal({ children }: { children: React.ReactNode }) {
       let heroOpacity: number;
 
       if (progress <= SCRUB_END) {
-        index = Math.min(
-          HERO_REVEAL_FRAME_COUNT - 1,
-          Math.round((progress / SCRUB_END) * (HERO_REVEAL_FRAME_COUNT - 1)),
-        );
+        index = Math.min(count - 1, Math.round((progress / SCRUB_END) * (count - 1)));
         whiteOpacity = 0;
         heroOpacity = 0;
       } else if (progress <= WHITE_HOLD_END) {
-        index = HERO_REVEAL_FRAME_COUNT - 1;
+        index = count - 1;
         whiteOpacity =
           progress <= WHITE_FADE_END
             ? (progress - SCRUB_END) / (WHITE_FADE_END - SCRUB_END)
             : 1;
         heroOpacity = 0;
       } else {
-        index = HERO_REVEAL_FRAME_COUNT - 1;
+        index = count - 1;
         whiteOpacity = 1;
         heroOpacity = Math.min(1, (progress - WHITE_HOLD_END) / (1 - WHITE_HOLD_END));
       }
@@ -134,9 +142,9 @@ export function HeroScrollReveal({ children }: { children: React.ReactNode }) {
 
     const load = async () => {
       await Promise.all(
-        Array.from({ length: HERO_REVEAL_FRAME_COUNT }, async (_, i) => {
+        Array.from({ length: count }, async (_, i) => {
           const img = new Image();
-          img.src = heroRevealFrameSrc(i);
+          img.src = heroRevealFrameSrc(i, variant);
           try {
             await img.decode();
           } catch {
@@ -169,10 +177,10 @@ export function HeroScrollReveal({ children }: { children: React.ReactNode }) {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onResize);
     };
-  }, []);
+  }, [count, skipMedia, variant]);
 
   return (
-    <div ref={wrapRef} className="relative h-[320vh] md:hidden motion-reduce:h-auto">
+    <div ref={wrapRef} className={wrapClass}>
       <div
         ref={stickyRef}
         className="sticky top-0 h-dvh w-full overflow-hidden bg-background"
@@ -180,7 +188,7 @@ export function HeroScrollReveal({ children }: { children: React.ReactNode }) {
       >
         <div className="pointer-events-none absolute inset-0">
           <img
-            src={heroRevealFrameSrc(0)}
+            src={heroRevealFrameSrc(0, variant)}
             alt=""
             className="absolute inset-0 h-full w-full object-cover"
             draggable={false}
@@ -193,7 +201,6 @@ export function HeroScrollReveal({ children }: { children: React.ReactNode }) {
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[28%] bg-gradient-to-t from-white via-white/55 to-transparent" />
         </div>
 
-        {/* Full white beat — hero does not start until this is solid */}
         <div
           className="pointer-events-none absolute inset-0 bg-white"
           style={{ opacity: "var(--white-opacity)" }}
@@ -205,7 +212,13 @@ export function HeroScrollReveal({ children }: { children: React.ReactNode }) {
           style={{ opacity: "var(--hero-opacity)", pointerEvents: "none" }}
         >
           <div className="pointer-events-none absolute inset-0 bg-gradient-mesh" />
-          <div className="relative flex h-full flex-col justify-start overflow-hidden">
+          <div
+            className={
+              variant === "desktop"
+                ? "relative flex h-full min-h-0 flex-col justify-center overflow-hidden"
+                : "relative flex h-full flex-col justify-start overflow-hidden"
+            }
+          >
             {children}
           </div>
         </div>

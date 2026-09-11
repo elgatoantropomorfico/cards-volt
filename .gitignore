@@ -4,6 +4,7 @@ out
 build
 .tmp-video-frames
 .tmp-reveal-preview
+.tmp-desk-preview
 .env
 .env.local
 .env*.local

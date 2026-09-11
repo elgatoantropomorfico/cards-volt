@@ -57,7 +57,7 @@ export function NfcCardVisual({
   flippable = true,
 }: {
   variant: "white" | "black";
-  size?: "default" | "hero";
+  size?: "default" | "hero" | "hero-lg";
   className?: string;
   flippable?: boolean;
 }) {
@@ -81,7 +81,7 @@ export function NfcCardVisual({
     <div
       className={cn(
         "relative shrink-0 select-none [perspective:1200px]",
-        size === "hero" ? "w-[248px] sm:w-[272px]" : "w-full max-w-[260px]",
+        size === "hero-lg" ? "w-[300px] lg:w-[340px]" : size === "hero" ? "w-[248px] sm:w-[272px]" : "w-full max-w-[260px]",
         flippable && "cursor-default",
         className,
       )}

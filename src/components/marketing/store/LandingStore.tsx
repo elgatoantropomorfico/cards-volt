@@ -22,13 +22,13 @@ export function LandingStore() {
         <LandingHeader />
 
         <main className="relative z-10">
-          <HeroScrollReveal>
+          <HeroScrollReveal variant="mobile">
             <LandingHero compact />
           </HeroScrollReveal>
 
-          <div className="hidden md:block">
-            <LandingHero />
-          </div>
+          <HeroScrollReveal variant="desktop">
+            <LandingHero fill />
+          </HeroScrollReveal>
 
           <div className="container space-y-20 pb-16 md:space-y-28">
             <ProductSection />
