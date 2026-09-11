@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CartProvider } from "./CartContext";
 import { FloatingCartIsland } from "./FloatingCartIsland";
 import { HeroCards3D } from "./HeroCards3D";
+import { HeroScrollReveal } from "./HeroScrollReveal";
 import { IncludedSection } from "./IncludedSection";
 import { LandingHeader } from "./LandingHeader";
 import { ProductSection } from "./ProductSection";
@@ -14,7 +15,7 @@ import { ArrowRight, Nfc, Sparkles } from "lucide-react";
 export function LandingStore() {
   return (
     <CartProvider>
-      <div className="relative min-h-screen overflow-hidden bg-background pb-28">
+      <div className="relative min-h-screen overflow-x-clip bg-background pb-28">
         <div className="pointer-events-none absolute inset-0 bg-gradient-mesh" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] [mask-image:linear-gradient(black,transparent)]">
           <div className="absolute inset-0 bg-grid-fade bg-[size:40px_40px] opacity-40" />
@@ -23,7 +24,9 @@ export function LandingStore() {
         <LandingHeader />
 
         <main className="relative z-10">
-          <section className="container grid items-center gap-8 pb-16 pt-10 md:grid-cols-2 md:gap-10 md:pb-24 md:pt-14">
+          <HeroScrollReveal />
+
+          <section className="container grid items-center gap-8 pb-16 pt-6 md:grid-cols-2 md:gap-10 md:pb-24 md:pt-14">
             <div className="order-2 md:order-1">
               <div className="inline-flex items-center gap-2 rounded-full border bg-card/70 px-3 py-1 text-[11px] font-medium text-muted-foreground shadow-soft backdrop-blur">
                 <span className="grid h-4 w-4 place-items-center rounded-full bg-emerald-600 text-white">

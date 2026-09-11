@@ -2,6 +2,8 @@ node_modules
 .next
 out
 build
+.tmp-video-frames
+.tmp-reveal-preview
 .env
 .env.local
 .env*.local
