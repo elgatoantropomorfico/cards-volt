@@ -168,7 +168,7 @@ export function HeroBeatTypography({
     return (
       <div
         className={cn(
-          "pointer-events-none absolute inset-0 z-20 flex flex-col justify-between px-5 pt-[max(7rem,23%)] pb-[18%]",
+          "pointer-events-none absolute inset-0 z-20 flex flex-col justify-between px-5 pt-[max(7.25rem,25.5%)] pb-[22.5%]",
           className,
         )}
       >
@@ -222,12 +222,12 @@ export function HeroBeatTypography({
         />
         <div aria-hidden />
         {rightLines ? (
-          <div className="flex min-w-0 translate-x-[calc(6%+10px)] flex-col items-start gap-0 text-left leading-none sm:translate-x-[calc(10%+10px)]">
+          <div className="flex min-w-0 translate-x-[calc(10%+14px)] flex-col items-start gap-0 text-left leading-none sm:translate-x-[calc(20%+20px)] md:translate-x-[calc(22%+24px)]">
             {rightBlock}
           </div>
         ) : (
           <div
-            className="translate-x-[calc(6%+10px)] sm:translate-x-[calc(10%+10px)]"
+            className="translate-x-[calc(10%+14px)] sm:translate-x-[calc(20%+20px)] md:translate-x-[calc(22%+24px)]"
             style={{ wordSpacing: "-0.12em" }}
           >
             {rightBlock}
