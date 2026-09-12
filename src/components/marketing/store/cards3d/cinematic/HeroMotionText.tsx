@@ -102,6 +102,8 @@ export function HeroMotionText({
   );
 }
 
+export type HeroBeatLayout = "sides" | "stack" | "diagonal";
+
 export function HeroBeatTypography({
   left,
   right,
@@ -111,6 +113,7 @@ export function HeroBeatTypography({
   rightSweep = 0,
   accentRight = false,
   rightLines,
+  layout = "sides",
   className,
 }: {
   left: string;
@@ -121,10 +124,86 @@ export function HeroBeatTypography({
   rightSweep?: number;
   accentRight?: boolean;
   rightLines?: [string, string];
+  /** sides = desktop L/R; stack = mobile top/bottom; diagonal = Acercá UL / Conectá BR */
+  layout?: HeroBeatLayout;
   className?: string;
 }) {
   const visible = leftAmount > 0.01 || rightAmount > 0.01;
   if (!visible) return null;
+
+  const textSize = "text-[clamp(1.05rem,5.2vw,1.65rem)] md:text-[clamp(1.15rem,2.4vw,1.95rem)]";
+
+  const rightBlock = rightLines ? (
+    <div className="flex min-w-0 flex-col gap-0 leading-none">
+      <HeroMotionText
+        text={rightLines[0]}
+        amount={rightAmount}
+        sweep={rightSweep}
+        align={layout === "sides" ? "left" : layout === "stack" ? "center" : "left"}
+        accent={accentRight}
+        className={cn("leading-[0.92] tracking-[-0.03em]", textSize)}
+      />
+      <HeroMotionText
+        text={rightLines[1]}
+        amount={Math.max(0, rightAmount - 0.06)}
+        sweep={Math.max(0, rightSweep - 0.06)}
+        align={layout === "sides" ? "left" : layout === "stack" ? "center" : "left"}
+        stagger={0.026}
+        accent={accentRight}
+        className={cn("-mt-1 leading-[0.92] tracking-[-0.03em]", textSize)}
+      />
+    </div>
+  ) : (
+    <HeroMotionText
+      text={right}
+      amount={rightAmount}
+      sweep={rightSweep}
+      align={layout === "sides" ? "left" : layout === "stack" ? "center" : "right"}
+      accent={accentRight}
+      className={textSize}
+    />
+  );
+
+  if (layout === "stack") {
+    return (
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-0 z-20 flex flex-col justify-between px-5 pt-[max(5.25rem,16%)] pb-[14%]",
+          className,
+        )}
+      >
+        <div className="flex w-full justify-center">
+          <HeroMotionText
+            text={left}
+            amount={leftAmount}
+            sweep={leftSweep}
+            align="center"
+            className={textSize}
+          />
+        </div>
+        <div className="flex w-full justify-center">{rightBlock}</div>
+      </div>
+    );
+  }
+
+  if (layout === "diagonal") {
+    return (
+      <div className={cn("pointer-events-none absolute inset-0 z-20", className)}>
+        <div className="absolute left-5 top-[max(5rem,17%)] max-w-[55%]">
+          <HeroMotionText
+            text={left}
+            amount={leftAmount}
+            sweep={leftSweep}
+            align="left"
+            className={textSize}
+          />
+        </div>
+        <div className="absolute bottom-[15%] right-5 max-w-[55%]">
+          {rightBlock}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -139,39 +218,19 @@ export function HeroBeatTypography({
           amount={leftAmount}
           sweep={leftSweep}
           align="right"
-          className="text-[clamp(0.95rem,4.2vw,1.95rem)] md:text-[clamp(1.15rem,2.4vw,1.95rem)]"
+          className={textSize}
         />
         <div aria-hidden />
         {rightLines ? (
           <div className="flex min-w-0 translate-x-[calc(6%+10px)] flex-col items-start gap-0 text-left leading-none sm:translate-x-[calc(10%+10px)]">
-            <HeroMotionText
-              text={rightLines[0]}
-              amount={rightAmount}
-              sweep={rightSweep}
-              align="left"
-              accent={accentRight}
-              className="leading-[0.92] tracking-[-0.03em] text-[clamp(0.95rem,4.2vw,1.95rem)] md:text-[clamp(1.15rem,2.4vw,1.95rem)]"
-            />
-            <HeroMotionText
-              text={rightLines[1]}
-              amount={Math.max(0, rightAmount - 0.06)}
-              sweep={Math.max(0, rightSweep - 0.06)}
-              align="left"
-              stagger={0.026}
-              accent={accentRight}
-              className="-mt-1 leading-[0.92] tracking-[-0.03em] text-[clamp(0.95rem,4.2vw,1.95rem)] md:text-[clamp(1.15rem,2.4vw,1.95rem)]"
-            />
+            {rightBlock}
           </div>
         ) : (
-          <div className="translate-x-[calc(6%+10px)] sm:translate-x-[calc(10%+10px)]" style={{ wordSpacing: "-0.12em" }}>
-            <HeroMotionText
-              text={right}
-              amount={rightAmount}
-              sweep={rightSweep}
-              align="left"
-              accent={accentRight}
-              className="text-[clamp(0.95rem,4.2vw,1.95rem)] md:text-[clamp(1.15rem,2.4vw,1.95rem)]"
-            />
+          <div
+            className="translate-x-[calc(6%+10px)] sm:translate-x-[calc(10%+10px)]"
+            style={{ wordSpacing: "-0.12em" }}
+          >
+            {rightBlock}
           </div>
         )}
       </div>

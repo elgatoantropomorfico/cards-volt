@@ -14,14 +14,34 @@ import { NfcWaves } from "./NfcWaves";
 import {
   sampleProductSequence,
   type ProductSequenceSample,
+  type SequenceViewOpts,
 } from "./useProductSequence";
+import { HERO_BEATS } from "./heroSequence";
 import { cn } from "@/lib/utils";
+
+function viewOptsFromFit(fit: SceneViewportFit): SequenceViewOpts {
+  return {
+    orbitElevMul: fit.orbitElevMul,
+    orbitRadiusMul: fit.orbitRadiusMul,
+    orbitTipMul: fit.orbitTipMul,
+    dollyZMul: fit.dollyZMul,
+  };
+}
 
 /** Desktop = identity. Mobile only scales framing — sequence timing untouched. */
 export type SceneViewportFit = {
   scale: number;
   fovAdd: number;
   distanceMul: number;
+  /** Mobile: card size through intro/flip (near final-hero look, little growth) */
+  cinematicCardScale?: number;
+  /** Orbit / dolly tighteners (1 = desktop) */
+  orbitElevMul?: number;
+  orbitRadiusMul?: number;
+  orbitTipMul?: number;
+  dollyZMul?: number;
+  /** Mobile: fade cards out into text-only hero */
+  hideFinalCards?: boolean;
 };
 
 export const DESKTOP_VIEWPORT_FIT: SceneViewportFit = {
@@ -31,9 +51,16 @@ export const DESKTOP_VIEWPORT_FIT: SceneViewportFit = {
 };
 
 export const MOBILE_VIEWPORT_FIT: SceneViewportFit = {
-  scale: 0.72,
-  fovAdd: 9,
-  distanceMul: 1.1,
+  scale: 1,
+  fovAdd: 5,
+  distanceMul: 0.98,
+  /** ≈ stack×black final presence — intro starts here, barely grows */
+  cinematicCardScale: 0.76,
+  orbitElevMul: 0.38,
+  orbitRadiusMul: 0.68,
+  orbitTipMul: 0.4,
+  dollyZMul: 0.55,
+  hideFinalCards: true,
 };
 
 if (typeof window !== "undefined") {
@@ -254,12 +281,15 @@ function AnimationDriver({
   const frozenSampleRef = React.useRef<ProductSequenceSample | null>(null);
 
   useFrame((_, delta) => {
+    const fit = viewportFitRef.current;
+    const viewOpts = viewOptsFromFit(fit);
+
     // Anchored final state — bake once, never re-sample mid-animation frames
     if (introLockedRef.current) {
       progressTargetRef.current = 1;
       progressSmoothRef.current = 1;
       if (!frozenSampleRef.current) {
-        frozenSampleRef.current = sampleProductSequence(1, layoutBiasRef.current);
+        frozenSampleRef.current = sampleProductSequence(1, layoutBiasRef.current, viewOpts);
       }
     } else {
       frozenSampleRef.current = null;
@@ -279,13 +309,13 @@ function AnimationDriver({
       }
     }
 
+    const p = progressSmoothRef.current;
     const sample =
       introLockedRef.current && frozenSampleRef.current
         ? frozenSampleRef.current
-        : sampleProductSequence(progressSmoothRef.current, layoutBiasRef.current);
+        : sampleProductSequence(p, layoutBiasRef.current, viewOpts);
     sampleRef.current = sample;
     settledRef.current = introLockedRef.current ? 1 : sample.settled;
-    const fit = viewportFitRef.current;
     const sMul = fit.scale;
 
     const off = sample.layoutOffset;
@@ -298,17 +328,37 @@ function AnimationDriver({
       stackRef.current.scale.setScalar(sample.stack.scale * sMul);
     }
 
+    // Mobile: large flat card through intro/flip, ease to NFC scale on reorient
+    let blackScale = sample.black.scale;
+    const flat = fit.cinematicCardScale;
+    if (flat != null && p < HERO_BEATS.returnToHero[0]) {
+      const reorient = HERO_BEATS.cardReorient[0];
+      const nfc = HERO_BEATS.nfcInteraction[0];
+      if (p < reorient) {
+        // Tiny breathing from keyframe scale so flip still reads
+        const breath = (sample.black.scale - 0.52) * 0.12;
+        blackScale = flat * (1 + breath);
+      } else if (p < nfc) {
+        const t = cineOutLocal((p - reorient) / (nfc - reorient || 1));
+        blackScale = THREE.MathUtils.lerp(flat, sample.black.scale, t);
+      }
+    }
+
+    const hideFinal =
+      Boolean(fit.hideFinalCards) &&
+      (introLockedRef.current || sample.contentOpacity > 0.06);
+
     blackPoseRef.current = {
       position: sample.black.position,
       rotation: sample.black.rotation,
-      scale: sample.black.scale,
-      visible: true,
+      scale: blackScale,
+      visible: !hideFinal,
     };
     whitePoseRef.current = {
       position: sample.white.position,
       rotation: sample.white.rotation,
       scale: sample.white.scale * (0.9 + 0.1 * sample.white.reveal),
-      visible: sample.white.reveal > 0.02,
+      visible: !hideFinal && sample.white.reveal > 0.02,
     };
     phonePoseRef.current = {
       position: [
@@ -327,6 +377,11 @@ function AnimationDriver({
   });
 
   return null;
+}
+
+function cineOutLocal(t: number) {
+  const x = Math.min(1, Math.max(0, t));
+  return 1 - Math.pow(1 - x, 3.25);
 }
 
 function SceneBody({

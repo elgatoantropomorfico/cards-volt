@@ -130,11 +130,19 @@ const NFC_CAM_Z = 7.5;
 const DOLLY_Z = 10.2; // soft pull-back before orbit
 const LOOK: Vec3 = [...NFC_LOCK.lookAt];
 
+export type SequenceViewOpts = {
+  orbitElevMul?: number;
+  orbitRadiusMul?: number;
+  orbitTipMul?: number;
+  dollyZMul?: number;
+};
+
 /** Dolly out only — same lookAt/FOV, objects frozen */
-function sampleDollyCamera(tRaw: number) {
+function sampleDollyCamera(tRaw: number, opts: SequenceViewOpts = {}) {
   const t = cineOut(clamp01(tRaw));
+  const dollyZ = lerp(NFC_CAM_Z, NFC_CAM_Z + (DOLLY_Z - NFC_CAM_Z) * (opts.dollyZMul ?? 1), t);
   return {
-    position: [LOOK[0], 0.08, lerp(NFC_CAM_Z, DOLLY_Z, t)] as Vec3,
+    position: [LOOK[0], 0.08, dollyZ] as Vec3,
     lookAt: [...LOOK] as Vec3,
     fov: NFC_FOV,
   };
@@ -144,15 +152,20 @@ function sampleDollyCamera(tRaw: number) {
  * Orbit at constant radius (= dolly end distance).
  * Same path as before, plus a slight contrapicado (camera lower, look higher).
  */
-function sampleOrbitCamera(tRaw: number) {
+function sampleOrbitCamera(tRaw: number, opts: SequenceViewOpts = {}) {
   const t = cineInOut(clamp01(tRaw));
+  const elevMul = opts.orbitElevMul ?? 1;
+  const radiusMul = opts.orbitRadiusMul ?? 1;
+  const tipMul = opts.orbitTipMul ?? 1;
+  const dollyEndZ = NFC_CAM_Z + (DOLLY_Z - NFC_CAM_Z) * (opts.dollyZMul ?? 1);
+
   const angle = t * Math.PI * 0.92;
-  const radius = Math.hypot(0, 0.08 - LOOK[1], DOLLY_Z - LOOK[2]);
+  const radius = Math.hypot(0, 0.08 - LOOK[1], dollyEndZ - LOOK[2]) * radiusMul;
   const elevStart = 0.08 - LOOK[1];
-  const elev = lerp(elevStart, 2.2, Math.pow(t, 0.9));
+  const elev = lerp(elevStart, 2.2 * elevMul, Math.pow(t, 0.9));
 
   // Contrapicado: same orbit, but tip the view — cam a bit lower, aim a bit higher
-  const tip = t * 0.85;
+  const tip = t * 0.85 * tipMul;
   const camY = LOOK[1] + elev - tip * 1.25;
   const lookY = LOOK[1] + tip * 0.65;
 
@@ -167,13 +180,14 @@ function sampleOrbitCamera(tRaw: number) {
   };
 }
 
-function orbitEndCamera() {
-  return sampleOrbitCamera(1);
+function orbitEndCamera(opts: SequenceViewOpts = {}) {
+  return sampleOrbitCamera(1, opts);
 }
 
 export function sampleProductSequence(
   progress: number,
   layoutBias: { x: number; y: number } = { x: 0, y: 0 },
+  viewOpts: SequenceViewOpts = {},
 ): ProductSequenceSample {
   const p = clamp01(progress);
   const { a, b, u } = findSpan(p);
@@ -227,19 +241,19 @@ export function sampleProductSequence(
   // ——— Dolly out (camera only, same FOV) ———
   if (p >= dolly[0] && p < dolly[1]) {
     const t = (p - dolly[0]) / (dolly[1] - dolly[0] || 1);
-    camera = sampleDollyCamera(t);
+    camera = sampleDollyCamera(t, viewOpts);
   }
 
   // ——— Orbit (camera only, constant radius — continues from dolly end) ———
   if (p >= orbit[0] && p <= orbit[1]) {
     const t = (p - orbit[0]) / (orbit[1] - orbit[0] || 1);
-    camera = sampleOrbitCamera(t);
+    camera = sampleOrbitCamera(t, viewOpts);
   }
 
   // ——— Continuous exit: phone fade+fall, card rises/rotates to hero ———
   if (p > exitStart) {
     const t = cineInOut(clamp01((p - exitStart) / (1 - exitStart)));
-    const endCam = orbitEndCamera();
+    const endCam = orbitEndCamera(viewOpts);
     const heroCam = {
       position: [
         HERO_CAMERA_FINAL.position[0] - 0.45,

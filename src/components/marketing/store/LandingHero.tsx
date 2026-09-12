@@ -11,9 +11,18 @@ import {
   type SceneViewportFit,
 } from "./cards3d/cinematic/HeroProductScene";
 import { HeroBeatTypography } from "./cards3d/cinematic/HeroMotionText";
-import { sampleProductSequence } from "./cards3d/cinematic/useProductSequence";
+import { sampleProductSequence, type SequenceViewOpts } from "./cards3d/cinematic/useProductSequence";
 import { useScrollProgress } from "./cards3d/cinematic/useScrollProgress";
 import { useLandingBoot } from "./LandingBoot";
+
+function viewOptsFromFit(fit: SceneViewportFit): SequenceViewOpts {
+  return {
+    orbitElevMul: fit.orbitElevMul,
+    orbitRadiusMul: fit.orbitRadiusMul,
+    orbitTipMul: fit.orbitTipMul,
+    dollyZMul: fit.dollyZMul,
+  };
+}
 
 export function LandingHero({ fill = true }: { fill?: boolean }) {
   void fill;
@@ -52,7 +61,7 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
     introLockedRef.current = true;
     progressTargetRef.current = 1;
     progressSmoothRef.current = 1;
-    sampleRef.current = sampleProductSequence(1, layoutBiasRef.current);
+    sampleRef.current = sampleProductSequence(1, layoutBiasRef.current, viewOptsFromFit(viewportFitRef.current));
     pendingStoreScrollRef.current = Boolean(opts?.toStore);
 
     setIntroLocked(true);
@@ -70,7 +79,7 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
     if (!introLocked) return;
     progressTargetRef.current = 1;
     progressSmoothRef.current = 1;
-    sampleRef.current = sampleProductSequence(1, layoutBiasRef.current);
+    sampleRef.current = sampleProductSequence(1, layoutBiasRef.current, viewOptsFromFit(viewportFitRef.current));
 
     if (pendingStoreScrollRef.current) {
       pendingStoreScrollRef.current = false;
@@ -180,7 +189,11 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
         progressTargetRef.current = 1;
         progressSmoothRef.current = 1;
       }
-      const sample = sampleProductSequence(progressSmoothRef.current, layoutBiasRef.current);
+      const sample = sampleProductSequence(
+        progressSmoothRef.current,
+        layoutBiasRef.current,
+        viewOptsFromFit(viewportFitRef.current),
+      );
       sampleRef.current = sample;
       setContentOpacity(sample.contentOpacity);
       // Slow bg blend tracks settled; after lock keep easing toward 1
@@ -258,6 +271,11 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
             "absolute inset-0 z-[1] transition-opacity duration-500",
             ready ? "opacity-100" : "opacity-0",
           )}
+          style={
+            ready && !isDesktop
+              ? { opacity: Math.max(0, 1 - contentOpacity) }
+              : undefined
+          }
         >
           {mountScene ? (
             <HeroProductScene
@@ -299,6 +317,7 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
               leftSweep={oppLeftSweep}
               rightSweep={oppRightSweep}
               accentRight
+              layout={isDesktop ? "sides" : "stack"}
             />
             <HeroBeatTypography
               left="Acercá"
@@ -307,6 +326,7 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
               rightAmount={connectRight}
               leftSweep={connectLeftSweep}
               rightSweep={connectRightSweep}
+              layout={isDesktop ? "sides" : "diagonal"}
             />
           </>
         ) : null}
@@ -324,7 +344,7 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
           </div>
         ) : null}
 
-        <div className="pointer-events-none relative z-10 flex h-full items-end md:items-center">
+        <div className="pointer-events-none relative z-10 flex h-full items-start pt-[max(5.25rem,11%)] md:items-center md:pt-0">
           <div className="container grid w-full items-center pb-10 md:grid-cols-2 md:gap-12 md:pb-0 lg:gap-16">
             <div
               className="max-w-xl md:pt-0"
