@@ -168,7 +168,7 @@ export function HeroBeatTypography({
     return (
       <div
         className={cn(
-          "pointer-events-none absolute inset-0 z-20 flex flex-col justify-between px-5 pt-[max(5.25rem,16%)] pb-[14%]",
+          "pointer-events-none absolute inset-0 z-20 flex flex-col justify-between px-5 pt-[max(7rem,23%)] pb-[18%]",
           className,
         )}
       >
@@ -189,7 +189,7 @@ export function HeroBeatTypography({
   if (layout === "diagonal") {
     return (
       <div className={cn("pointer-events-none absolute inset-0 z-20", className)}>
-        <div className="absolute left-5 top-[max(5rem,17%)] max-w-[55%]">
+        <div className="absolute left-4 top-[max(5.25rem,17.5%)] sm:left-6">
           <HeroMotionText
             text={left}
             amount={leftAmount}
@@ -198,7 +198,7 @@ export function HeroBeatTypography({
             className={textSize}
           />
         </div>
-        <div className="absolute bottom-[15%] right-5 max-w-[55%]">
+        <div className="absolute right-4 top-[max(5.25rem,17.5%)] sm:right-6">
           {rightBlock}
         </div>
       </div>

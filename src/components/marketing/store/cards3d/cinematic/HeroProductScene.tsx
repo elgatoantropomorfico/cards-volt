@@ -60,7 +60,7 @@ export const MOBILE_VIEWPORT_FIT: SceneViewportFit = {
   orbitRadiusMul: 0.68,
   orbitTipMul: 0.4,
   dollyZMul: 0.55,
-  hideFinalCards: true,
+  hideFinalCards: false,
 };
 
 if (typeof window !== "undefined") {

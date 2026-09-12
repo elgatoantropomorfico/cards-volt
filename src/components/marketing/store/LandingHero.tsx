@@ -14,6 +14,7 @@ import { HeroBeatTypography } from "./cards3d/cinematic/HeroMotionText";
 import { sampleProductSequence, type SequenceViewOpts } from "./cards3d/cinematic/useProductSequence";
 import { useScrollProgress } from "./cards3d/cinematic/useScrollProgress";
 import { useLandingBoot } from "./LandingBoot";
+import { HeroCards3D } from "./HeroCards3D";
 
 function viewOptsFromFit(fit: SceneViewportFit): SequenceViewOpts {
   return {
@@ -218,7 +219,8 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
       // Chip only through the opening flip, then gone
       setSkipVisible(!introLockedRef.current && p < 0.11);
 
-      if (!introLockedRef.current && (p >= 0.992 || target >= 0.992)) {
+      const lockThreshold = isDesktop ? 0.992 : 0.985;
+      if (!introLockedRef.current && (p >= lockThreshold || target >= lockThreshold)) {
         lockIntro();
       }
 
@@ -226,7 +228,7 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [reducedMotion, lockIntro]);
+  }, [isDesktop, reducedMotion, lockIntro]);
 
   React.useEffect(() => {
     if (!reducedMotion) return;
@@ -249,12 +251,27 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
     lockIntro({ toStore: true });
   }, [lockIntro]);
 
-  // Full-bleed sticky stage under fixed header; tall scrub until locked
-  const trackClass = introLocked ? "h-[100dvh]" : isDesktop ? "h-[1050vh]" : "h-[780vh]";
+  // Full-bleed sticky stage under fixed header; tall scrub until locked.
+  // On mobile locked, uses natural height so #tarjetas flows immediately without dead space.
+  const isMobileLocked = introLocked && !isDesktop;
+  const trackClass = isMobileLocked
+    ? "h-auto min-h-0"
+    : introLocked
+      ? "h-[100dvh]"
+      : isDesktop
+        ? "h-[1050vh]"
+        : "h-[780vh]";
 
   return (
     <section ref={trackRef} className={cn("relative", trackClass)}>
-      <div className="sticky top-0 h-[100dvh] w-full overflow-hidden">
+      <div
+        className={cn(
+          "w-full",
+          isMobileLocked
+            ? "relative h-auto pt-16 pb-10 sm:pt-20 sm:pb-14"
+            : "sticky top-0 h-[100dvh] overflow-hidden",
+        )}
+      >
         {/* Soft page-bg fade-in — bridges cinematic end → hero ecommerce look */}
         <div
           aria-hidden
@@ -270,12 +287,8 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
           className={cn(
             "absolute inset-0 z-[1] transition-opacity duration-500",
             ready ? "opacity-100" : "opacity-0",
+            isMobileLocked && "hidden md:block",
           )}
-          style={
-            ready && !isDesktop
-              ? { opacity: Math.max(0, 1 - contentOpacity) }
-              : undefined
-          }
         >
           {mountScene ? (
             <HeroProductScene
@@ -344,14 +357,21 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
           </div>
         ) : null}
 
-        <div className="pointer-events-none relative z-10 flex h-full items-start pt-[max(5.25rem,11%)] md:items-center md:pt-0">
-          <div className="container grid w-full items-center pb-10 md:grid-cols-2 md:gap-12 md:pb-0 lg:gap-16">
+        <div
+          className={cn(
+            "relative z-10 flex w-full",
+            isMobileLocked
+              ? "h-auto items-start"
+              : "pointer-events-none h-full items-start pt-[max(5.25rem,11%)] md:items-center md:pt-0",
+          )}
+        >
+          <div className="container grid w-full items-center pb-6 md:grid-cols-2 md:gap-12 md:pb-0 lg:gap-16">
             <div
               className="max-w-xl md:pt-0"
               style={{
-                opacity: contentOpacity,
-                transform: `translateY(${(1 - contentOpacity) * 14}px)`,
-                pointerEvents: contentOpacity > 0.55 ? "auto" : "none",
+                opacity: isMobileLocked ? 1 : contentOpacity,
+                transform: isMobileLocked ? "none" : `translateY(${(1 - contentOpacity) * 14}px)`,
+                pointerEvents: isMobileLocked || contentOpacity > 0.55 ? "auto" : "none",
               }}
             >
               <div className="inline-flex items-center gap-2 rounded-full border bg-card/70 px-3 py-1 text-[11px] font-medium text-muted-foreground shadow-soft backdrop-blur">
@@ -367,6 +387,13 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
                   Tu perfil digital.
                 </span>
               </h1>
+
+              {/* Mobile static 3D cards: exact original model, responsive height, no dead space */}
+              {isMobileLocked ? (
+                <div className="my-3 flex justify-center md:hidden w-full">
+                  <HeroCards3D className="h-[250px] sm:h-[290px] w-full max-w-[340px]" />
+                </div>
+              ) : null}
 
               <p className="mt-4 max-w-lg text-pretty text-[15px] leading-relaxed text-muted-foreground md:mt-6 md:text-[17px]">
                 Blanca o negra, con NFC y QR integrados. Incluye Volt Cards Social Media: editá tu

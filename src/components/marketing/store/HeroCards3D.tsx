@@ -5,7 +5,13 @@ import { CardScene } from "./cards3d/CardScene";
 import { useLandingBoot } from "./LandingBoot";
 import { cn } from "@/lib/utils";
 
-export function HeroCards3D({ fill = false }: { fill?: boolean }) {
+export function HeroCards3D({
+  fill = false,
+  className,
+}: {
+  fill?: boolean;
+  className?: string;
+}) {
   const boot = useLandingBoot();
   const [ready, setReady] = React.useState(false);
   const [mountScene, setMountScene] = React.useState(false);
@@ -29,11 +35,15 @@ export function HeroCards3D({ fill = false }: { fill?: boolean }) {
       className={cn(
         "relative w-full",
         ready ? "overflow-visible" : "overflow-hidden",
-        "w-[min(100%,780px)] sm:w-[min(100%,820px)] lg:w-[min(100%,880px)]",
-        "-mx-3 sm:-mx-1 md:-mr-6 lg:-mr-8",
-        fill
-          ? "h-[min(580px,70vh)] lg:h-[min(640px,74vh)]"
-          : "h-[min(440px,78vw)] sm:h-[480px]",
+        className
+          ? className
+          : cn(
+              "w-[min(100%,780px)] sm:w-[min(100%,820px)] lg:w-[min(100%,880px)]",
+              "-mx-3 sm:-mx-1 md:-mr-6 lg:-mr-8",
+              fill
+                ? "h-[min(580px,70vh)] lg:h-[min(640px,74vh)]"
+                : "h-[min(440px,78vw)] sm:h-[480px]",
+            ),
       )}
     >
       {mountScene ? (
