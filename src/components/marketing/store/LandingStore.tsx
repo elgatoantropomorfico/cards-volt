@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { CartProvider } from "./CartContext";
+import { CartDrawer } from "./CartDrawer";
 import { FloatingCartIsland } from "./FloatingCartIsland";
 import { IncludedSection } from "./IncludedSection";
 import { LandingBootProvider } from "./LandingBoot";
@@ -12,9 +13,8 @@ import { SocialMediaSection } from "./SocialMediaSection";
 
 export function LandingStore() {
   return (
-    <CartProvider>
-      <LandingBootProvider>
-        <div className="relative min-h-screen overflow-x-clip bg-background pb-28">
+    <LandingBootProvider>
+      <div className="relative min-h-screen overflow-x-clip bg-background pb-28">
           <div className="pointer-events-none absolute inset-0 bg-gradient-mesh" />
           <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] [mask-image:linear-gradient(black,transparent)]">
             <div className="absolute inset-0 bg-grid-fade bg-[size:40px_40px] opacity-40" />
@@ -38,8 +38,8 @@ export function LandingStore() {
                   <ol className="mt-6 grid gap-4 md:grid-cols-3">
                     {[
                       { step: "1", title: "Elegí modelo y cantidad", desc: "Tarjeta blanca o negra. Sumá las que necesites al carrito." },
-                      { step: "2", title: "Revisá el total anual", desc: "La isla flotante muestra el monto antes de enviar." },
-                      { step: "3", title: "WhatsApp y listo", desc: "Coordinamos pago, personalización y envío de tu tarjeta." },
+                      { step: "2", title: "Pago seguro con Mercado Pago", desc: "Abonás con tarjeta, débito o dinero en cuenta en segundos." },
+                      { step: "3", title: "Configurá tu perfil", desc: "Completá tu identidad digital en el wizard y mandamos a fabricar tu tarjeta." },
                     ].map((item) => (
                       <li key={item.step} className="rounded-2xl border bg-background/60 p-5">
                         <span className="grid h-7 w-7 place-items-center rounded-full bg-foreground text-[11px] font-bold text-background">
@@ -69,9 +69,9 @@ export function LandingStore() {
             </div>
           </footer>
 
+          <CartDrawer />
           <FloatingCartIsland />
-        </div>
-      </LandingBootProvider>
-    </CartProvider>
+      </div>
+    </LandingBootProvider>
   );
 }

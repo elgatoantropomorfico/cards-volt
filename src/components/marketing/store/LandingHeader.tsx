@@ -12,7 +12,7 @@ const NAV = [
 ];
 
 export function LandingHeader() {
-  const { count } = useCart();
+  const { count, setDrawerOpen } = useCart();
 
   return (
     <header className="fixed inset-x-0 top-0 z-40 border-b border-black/5 bg-background/70 backdrop-blur-xl">
@@ -28,28 +28,34 @@ export function LandingHeader() {
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-          {NAV.map((item) => (
-            <a key={item.href} href={item.href} className="transition hover:text-foreground">
-              {item.label}
-            </a>
-          ))}
+          <a key="#tarjetas" href="#tarjetas" className="transition hover:text-foreground">
+            Tarjetas
+          </a>
+          <a key="#social" href="#social" className="transition hover:text-foreground">
+            Social Media
+          </a>
           <Link href="/login" className="transition hover:text-foreground">
             Acceder
           </Link>
         </nav>
 
         <div className="flex items-center gap-2">
-          <div className="relative flex items-center gap-1.5 rounded-full bg-secondary/60 px-2.5 py-1.5 text-sm">
-            <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            className="relative flex items-center gap-1.5 rounded-full bg-secondary/80 hover:bg-secondary px-3 py-1.5 text-sm transition"
+            aria-label="Abrir carrito"
+          >
+            <ShoppingBag className="h-4 w-4 text-foreground" />
             <span
               className={cn(
-                "grid min-w-[1.25rem] place-items-center rounded-full px-1 text-[10px] font-bold",
-                count > 0 ? "bg-foreground text-background" : "text-muted-foreground",
+                "grid min-w-[1.25rem] place-items-center rounded-full px-1 text-[11px] font-bold",
+                count > 0 ? "bg-violet-600 text-white" : "text-muted-foreground",
               )}
             >
               {count}
             </span>
-          </div>
+          </button>
           <a href="#tarjetas" className="hidden sm:block">
             <Button variant="gradient" size="sm">
               Comprar

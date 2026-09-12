@@ -10,6 +10,8 @@ import { TEMPLATE_VALUES } from "@/lib/profile-types";
 import { normalizeLinkUrl } from "@/lib/socials";
 import { formatZodError, optionalEmail, optionalHttpUrl, optionalWebsite } from "@/lib/validation";
 
+import { generatePublicId } from "@/lib/id";
+
 const KIND_VALUES = [
   "WEBSITE","INSTAGRAM","LINKEDIN","TWITTER","FACEBOOK","YOUTUBE","TIKTOK","GITHUB","SPOTIFY","CALENDAR","EMAIL","PHONE","WHATSAPP","MAP","PDF","OTHER",
 ] as const;
@@ -46,11 +48,21 @@ async function loadOwnedProfile() {
       data: {
         userId: user.id,
         slug,
+        publicId: generatePublicId(),
         fullName: user.name || user.email,
         email: user.email,
       },
     });
     return { user, profile };
+  }
+  // Ensure profile has a publicId if created prior to this migration
+  if (!user.profile.publicId) {
+    const publicId = generatePublicId();
+    const updated = await prisma.profile.update({
+      where: { id: user.profile.id },
+      data: { publicId },
+    });
+    return { user, profile: updated };
   }
   return { user, profile: user.profile };
 }

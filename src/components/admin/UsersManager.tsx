@@ -17,7 +17,14 @@ type Row = {
   name: string;
   email: string;
   role: "SUPERADMIN" | "USER";
-  profile: { id: string; slug: string; active: boolean } | null;
+  profile: {
+    id: string;
+    slug: string;
+    active: boolean;
+    source?: string;
+    sourceOrderId?: string | null;
+    sourceOrderNumber?: string | null;
+  } | null;
 };
 
 export function UsersManager({
@@ -54,7 +61,8 @@ export function UsersManager({
               <th className="px-4 py-3">Email</th>
               <th className="px-4 py-3">Rol</th>
               <th className="px-4 py-3">Slug</th>
-              <th className="px-4 py-3">Perfil</th>
+              <th className="px-4 py-3">Origen</th>
+              <th className="px-4 py-3">Activo</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
@@ -113,10 +121,19 @@ function UserRow({
       <td className="px-4 py-3"><Badge variant="outline">{u.role}</Badge></td>
       <td className="px-4 py-3">
         {u.profile ? (
-          <Link href={`/${u.profile.slug}`} target="_blank" className="inline-flex items-center gap-1 hover:underline">
+          <Link href={`/${u.profile.slug}`} target="_blank" className="inline-flex items-center gap-1 hover:underline font-mono text-xs">
             /{u.profile.slug} <ExternalLink className="h-3 w-3" />
           </Link>
         ) : "—"}
+      </td>
+      <td className="px-4 py-3">
+        {u.profile?.source === "ECOMMERCE" ? (
+          <Badge variant="outline" className="text-[10px] font-mono border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/10">
+            Tienda · {u.profile.sourceOrderNumber || "VC"}
+          </Badge>
+        ) : (
+          <span className="text-xs text-muted-foreground">Manual</span>
+        )}
       </td>
       <td className="px-4 py-3">
         {u.profile ? <Switch checked={active} onCheckedChange={onToggle} /> : "—"}

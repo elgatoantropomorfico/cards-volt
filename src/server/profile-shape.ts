@@ -4,8 +4,15 @@ import type { ProfileLink, ProfileView } from "@/lib/profile-types";
 export function profileToView(p: DbProfile): ProfileView {
   return {
     id: p.id,
+    publicId: p.publicId,
     slug: p.slug,
     active: p.active,
+    source: p.source,
+    sourceOrderId: p.sourceOrderId,
+    sourceOrderNumber: p.sourceOrderNumber,
+    profileStatus: p.profileStatus,
+    onboardingStatus: p.onboardingStatus,
+    onboardingStep: p.onboardingStep,
     fullName: p.fullName,
     jobTitle: p.jobTitle,
     companyName: p.companyName,

@@ -115,13 +115,44 @@ enum LinkKind {
   OTHER
 }
 
+enum ProfileSource {
+  MANUAL
+  ECOMMERCE
+  IMPORT
+  INVITE
+  API
+  OTHER
+}
+
+enum ProfileStatus {
+  PENDING_CONFIGURATION
+  CONFIGURING
+  READY
+}
+
+enum OnboardingStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
 model Profile {
   id           String   @id @default(cuid())
+  publicId     String?  @unique
   slug         String   @unique
   active       Boolean  @default(true)
 
   userId       String   @unique
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Ecommerce linkage & Lifecycle
+  source              ProfileSource    @default(MANUAL)
+  sourceOrderId       String?
+  sourceOrderNumber   String?
+  profileStatus       ProfileStatus    @default(READY)
+  onboardingStatus    OnboardingStatus @default(COMPLETED)
+  onboardingStep      Int              @default(1)
+  onboardingDoneAt    DateTime?
 
   fullName     String
   jobTitle     String?
@@ -153,10 +184,13 @@ model Profile {
 
   links        Link[]
   card         NfcCard?
+  orders       Order[]
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  @@index([source])
+  @@index([profileStatus])
   @@map("profiles")
 }
 
@@ -195,4 +229,303 @@ model NfcCard {
   updatedAt    DateTime   @updatedAt
 
   @@map("nfc_cards")
+}
+
+// ==========================================
+// ---------- E-COMMERCE ENGINE -------------
+// ==========================================
+
+model Product {
+  id                 String           @id @default(cuid())
+  slug               String           @unique
+  name               String
+  shortName          String?
+  tagline            String?
+  description        String?
+  shortDescription   String?
+  images             String[]         @default([])
+  price              Decimal          @db.Decimal(12, 2)
+  compareAtPrice     Decimal?         @db.Decimal(12, 2)
+  monthlyPrice       Decimal?         @db.Decimal(12, 2)
+  sku                String?          @unique
+  active             Boolean          @default(true)
+  stockManaged       Boolean          @default(true)
+  stockQuantity      Int              @default(0)
+  lowStockThreshold  Int              @default(5)
+  badge              String?
+  features           String[]         @default([])
+  metadata           Json?
+  variants           ProductVariant[]
+  orderItems         OrderItem[]
+  cartItems          CartItem[]
+  inventoryMovements InventoryMovement[]
+
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@map("products")
+}
+
+model ProductVariant {
+  id                 String           @id @default(cuid())
+  productId          String
+  product            Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku                String           @unique
+  name               String
+  color              String?
+  material           String?
+  finish             String?
+  price              Decimal?         @db.Decimal(12, 2)
+  stockQuantity      Int              @default(0)
+  active             Boolean          @default(true)
+  orderItems         OrderItem[]
+  cartItems          CartItem[]
+  inventoryMovements InventoryMovement[]
+
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
+enum InventoryMovementType {
+  PURCHASE
+  SALE
+  MANUAL_ADJUSTMENT
+  RETURN
+  CANCELLATION
+  DAMAGE
+  OTHER
+}
+
+model InventoryMovement {
+  id          String                @id @default(cuid())
+  productId   String
+  product     Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantId   String?
+  variant     ProductVariant?       @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  quantity    Int
+  type        InventoryMovementType
+  orderId     String?
+  adminId     String?
+  note        String?
+  createdAt   DateTime              @default(now())
+
+  @@index([productId])
+  @@index([variantId])
+  @@index([orderId])
+  @@map("inventory_movements")
+}
+
+enum CartStatus {
+  ACTIVE
+  CONVERTED
+  ABANDONED
+}
+
+model Cart {
+  id            String     @id @default(cuid())
+  userId        String?
+  sessionId     String?    @unique
+  status        CartStatus @default(ACTIVE)
+  currency      String     @default("ARS")
+  subtotal      Decimal    @default(0) @db.Decimal(12, 2)
+  shippingTotal Decimal    @default(0) @db.Decimal(12, 2)
+  total         Decimal    @default(0) @db.Decimal(12, 2)
+  items         CartItem[]
+  orders        Order[]
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([userId])
+  @@index([sessionId])
+  @@map("carts")
+}
+
+model CartItem {
+  id         String          @id @default(cuid())
+  cartId     String
+  cart       Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantId  String?
+  variant    ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  quantity   Int             @default(1)
+  unitPrice  Decimal         @db.Decimal(12, 2)
+  subtotal   Decimal         @db.Decimal(12, 2)
+
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@unique([cartId, productId, variantId])
+  @@index([cartId])
+  @@map("cart_items")
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  REFUNDED
+}
+
+enum FulfillmentStatus {
+  AWAITING_PROFILE
+  READY_FOR_PRODUCTION
+  IN_PRODUCTION
+  READY_TO_SHIP
+  FULFILLED
+  CANCELLED
+}
+
+enum ShippingStatus {
+  PENDING
+  LABEL_CREATED
+  SHIPPED
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+}
+
+model Order {
+  id                  String            @id @default(cuid())
+  orderNumber         String            @unique
+  userId              String?
+  profileId           String?
+  profile             Profile?          @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  cartId              String?
+  cart                Cart?             @relation(fields: [cartId], references: [id], onDelete: SetNull)
+
+  customerName        String
+  email               String
+  phone               String?
+  identificationNumber String?
+
+  currency            String            @default("ARS")
+  subtotal            Decimal           @db.Decimal(12, 2)
+  shippingTotal       Decimal           @default(0) @db.Decimal(12, 2)
+  discountTotal       Decimal           @default(0) @db.Decimal(12, 2)
+  total               Decimal           @db.Decimal(12, 2)
+
+  paymentStatus       PaymentStatus     @default(PENDING)
+  fulfillmentStatus   FulfillmentStatus @default(AWAITING_PROFILE)
+  shippingStatus      ShippingStatus    @default(PENDING)
+
+  source              String            @default("ecommerce")
+  shippingAddress     Json?
+  shippingProvider    String?
+  shippingMethod      String?
+  shippingCost        Decimal?          @db.Decimal(12, 2)
+  shipmentId          String?
+  trackingNumber      String?
+  trackingUrl         String?
+
+  items               OrderItem[]
+  payments            Payment[]
+  events              OrderEvent[]
+
+  paidAt              DateTime?
+  fulfilledAt         DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([profileId])
+  @@index([email])
+  @@index([paymentStatus])
+  @@index([fulfillmentStatus])
+  @@index([shippingStatus])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                  String          @id @default(cuid())
+  orderId             String
+  order               Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId           String
+  product             Product         @relation(fields: [productId], references: [id], onDelete: Restrict)
+  variantId           String?
+  variant             ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  productNameSnapshot String
+  skuSnapshot         String?
+  quantity            Int
+  unitPrice           Decimal         @db.Decimal(12, 2)
+  subtotal            Decimal         @db.Decimal(12, 2)
+
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  orderId           String
+  order             Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider          String        @default("mercadopago")
+  externalPaymentId String?       @unique
+  externalReference String?
+  status            PaymentStatus @default(PENDING)
+  amount            Decimal       @db.Decimal(12, 2)
+  currency          String        @default("ARS")
+  paymentMethod     String?
+  paymentTypeId     String?
+  rawPayload        Json?
+
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([orderId])
+  @@index([externalPaymentId])
+  @@index([externalReference])
+  @@map("payments")
+}
+
+model OrderEvent {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  detail    String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@map("order_events")
+}
+
+model StoreSetting {
+  id        String   @id @default("default")
+  // General
+  storeName        String   @default("Volt Cards Store")
+  storeEmail       String?  @default("hola@voltaiagents.com")
+  storePhone       String?  @default("+54 9 379 478-9169")
+  currency         String   @default("ARS")
+  active           Boolean  @default(true)
+
+  // Mercado Pago
+  mpPublicKey      String?
+  mpAccessToken    String?
+  mpWebhookSecret  String?
+  mpSandbox        Boolean  @default(false)
+
+  // Mercado Envíos / Shipping
+  shippingEnabled  Boolean  @default(true)
+  shippingProvider String   @default("mercadoenvios")
+  shippingOriginAddress String?
+  shippingOriginPostalCode String?
+  flatShippingRate Decimal? @default(0) @db.Decimal(12, 2)
+
+  // Metadata / extra options
+  checkoutNotes    String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("store_settings")
 }

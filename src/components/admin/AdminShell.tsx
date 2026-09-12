@@ -4,19 +4,21 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, CreditCard, LogOut, ArrowLeft } from "lucide-react";
+import { Users, CreditCard, LogOut, ArrowLeft, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogoutButton } from "@/components/dashboard/LogoutButton";
 import { UsersManager } from "@/components/admin/UsersManager";
 import { CardsManager } from "@/components/admin/CardsManager";
+import { StoreManager } from "@/components/admin/StoreManager";
 import { cn } from "@/lib/utils";
 
-type Section = "users" | "cards";
+type Section = "users" | "cards" | "store";
 
 const NAV: { id: Section; label: string; icon: React.ReactNode }[] = [
-  { id: "users", label: "Usuarios", icon: <Users className="h-4 w-4" /> },
+  { id: "store", label: "Tienda & Pedidos", icon: <ShoppingBag className="h-4 w-4" /> },
+  { id: "users", label: "Usuarios & Perfiles", icon: <Users className="h-4 w-4" /> },
   { id: "cards", label: "Tarjetas NFC", icon: <CreditCard className="h-4 w-4" /> },
 ];
 
@@ -25,18 +27,27 @@ export function AdminShell({
   users,
   cards,
   profiles,
+  storeData,
 }: {
   userEmail: string;
   users: Parameters<typeof UsersManager>[0]["users"];
   cards: Parameters<typeof CardsManager>[0]["cards"];
   profiles: Parameters<typeof CardsManager>[0]["profiles"];
+  storeData: {
+    metrics: any;
+    orders: any[];
+    products: any[];
+    stockMovements: any[];
+    settings: Record<string, string>;
+    appHost: string;
+  };
 }) {
   const router = useRouter();
   const [section, setSection] = React.useState<Section>(() => {
-    if (typeof window === "undefined") return "users";
+    if (typeof window === "undefined") return "store";
     const h = window.location.hash.replace("#", "");
     if (h === "companies") return "users";
-    return (["users", "cards"] as Section[]).includes(h as Section) ? (h as Section) : "users";
+    return (["users", "cards", "store"] as Section[]).includes(h as Section) ? (h as Section) : "store";
   });
 
   React.useEffect(() => {
@@ -52,12 +63,12 @@ export function AdminShell({
         <div className="container flex h-14 items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link href="/admin" className="flex items-center gap-2">
-              <span className="grid h-7 w-7 place-items-center rounded-lg bg-foreground text-background shadow-soft">
+              <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#7000FF] text-white shadow-soft">
                 <span className="font-display text-sm font-bold">V</span>
               </span>
-              <span className="font-display text-[15px] font-semibold tracking-tight">Volt Cards</span>
+              <span className="font-display text-[15px] font-semibold tracking-tight">Volt Superadmin</span>
             </Link>
-            <Badge variant="secondary">Admin</Badge>
+            <Badge variant="secondary">E-Commerce & Platform</Badge>
           </div>
           <div className="flex items-center gap-2">
             <Link href="/dashboard">
@@ -65,7 +76,7 @@ export function AdminShell({
                 <ArrowLeft className="h-3.5 w-3.5" /> Mi perfil
               </Button>
             </Link>
-            <span className="hidden text-xs text-muted-foreground md:inline">{userEmail}</span>
+            <span className="hidden text-xs text-muted-foreground md:inline font-mono">{userEmail}</span>
             <LogoutButton>
               <LogOut className="h-4 w-4" />
             </LogoutButton>
@@ -74,9 +85,22 @@ export function AdminShell({
       </header>
 
       <div className="container py-6">
-        <div className="mb-6 grid gap-4 sm:grid-cols-2">
-          <StatCard label="Usuarios" value={users.length} icon={<Users className="h-4 w-4" />} />
-          <StatCard label="Tarjetas NFC" value={cards.length} icon={<CreditCard className="h-4 w-4" />} />
+        <div className="mb-6 grid gap-4 sm:grid-cols-3">
+          <StatCard
+            label="Ventas Tienda"
+            value={storeData.orders.length}
+            icon={<ShoppingBag className="h-4 w-4 text-[#7000FF]" />}
+          />
+          <StatCard
+            label="Usuarios"
+            value={users.length}
+            icon={<Users className="h-4 w-4" />}
+          />
+          <StatCard
+            label="Tarjetas NFC"
+            value={cards.length}
+            icon={<CreditCard className="h-4 w-4" />}
+          />
         </div>
 
         <nav className="mb-6 inline-flex rounded-2xl border bg-card/80 p-1 shadow-soft backdrop-blur">
@@ -88,8 +112,8 @@ export function AdminShell({
                 type="button"
                 onClick={() => setSection(n.id)}
                 className={cn(
-                  "relative inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition",
-                  active ? "text-background" : "text-muted-foreground hover:text-foreground",
+                  "relative inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition",
+                  active ? "text-background" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {active && (
@@ -116,11 +140,24 @@ export function AdminShell({
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           >
+            {section === "store" && (
+              <StoreManager
+                metrics={storeData.metrics}
+                orders={storeData.orders}
+                products={storeData.products}
+                stockMovements={storeData.stockMovements}
+                settings={storeData.settings}
+                appHost={storeData.appHost}
+              />
+            )}
+
             {section === "users" && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Usuarios</CardTitle>
-                  <CardDescription>Crear usuarios con el asistente completo y gestionar cuentas, perfiles y enlaces.</CardDescription>
+                  <CardTitle>Usuarios & Perfiles</CardTitle>
+                  <CardDescription>
+                    Gestión de usuarios creados manualmente o generados automáticamente por compras en la Tienda.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <UsersManager users={users} onChanged={() => router.refresh()} />
@@ -132,7 +169,7 @@ export function AdminShell({
               <Card>
                 <CardHeader>
                   <CardTitle>Tarjetas NFC</CardTitle>
-                  <CardDescription>Códigos internos, asignación a perfiles y estados.</CardDescription>
+                  <CardDescription>Códigos internos de chips, asignación a perfiles y estados de vinculación.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <CardsManager profiles={profiles} cards={cards} onChanged={() => router.refresh()} />

@@ -116,6 +116,26 @@ export function DashboardShell({
       </header>
 
       <div className="container px-4 py-4 sm:py-6">
+        {profile.profileStatus === "PENDING_CONFIGURATION" && profile.sourceOrderId && (
+          <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-[#7000FF]/20 to-[#A855F7]/10 border border-[#7000FF]/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <h4 className="font-semibold text-sm">Tu Volt Card ({profile.sourceOrderNumber || "Tienda"}) está pendiente de configuración</h4>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Completá el asistente guiado para que podamos enviar tu tarjeta física a producción.
+              </p>
+            </div>
+            <Link
+              href={`/onboarding/${profile.sourceOrderId}`}
+              className="px-4 py-2 rounded-xl bg-[#7000FF] hover:bg-[#8A2BE2] text-white text-xs font-semibold shrink-0 shadow-md transition-colors"
+            >
+              Continuar configurando mi Volt Card →
+            </Link>
+          </div>
+        )}
+
         <div className="mb-4 flex min-w-0 items-center justify-between gap-2 sm:mb-6 sm:gap-3">
           <nav className="flex max-w-full overflow-x-auto rounded-2xl border bg-card/80 p-1 shadow-soft backdrop-blur [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {NAV.map((n) => {

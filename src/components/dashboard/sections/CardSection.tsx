@@ -83,26 +83,39 @@ export function CardSection({
     toast({ title: "Tarjeta desvinculada", variant: "success" });
   }
 
-  const url = `${appBaseUrl}/${profile.slug}`;
+  const humanUrl = `${appBaseUrl}/${profile.slug}`;
+  const permanentUrl = profile.publicId ? `${appBaseUrl}/c/${profile.publicId}` : humanUrl;
 
   return (
     <div className="space-y-5 pb-24 sm:space-y-6 sm:pb-6">
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">URL pública</CardTitle>
-          <CardDescription>El destino al que apunta tu tarjeta NFC y tu QR.</CardDescription>
+          <CardTitle className="text-lg">Enlaces de tu perfil</CardTitle>
+          <CardDescription>Tu enlace personalizado para compartir y la llave permanente de tu tarjeta física.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={profile.active ? "success" : "warning"}>{profile.active ? "Activa" : "Inactiva"}</Badge>
             <span className="font-mono text-xs text-muted-foreground">{profile.template.toLowerCase()}</span>
           </div>
-          <code className="block w-full truncate rounded-xl border bg-secondary px-3 py-2.5 font-mono text-xs sm:text-sm">{url}</code>
-          <div className="grid grid-cols-2 gap-2">
-            <CopyButton value={url} className="w-full" />
-            <Link href={`/${profile.slug}`} target="_blank" className="w-full">
-              <Button variant="outline" className="w-full"><ExternalLink className="h-4 w-4" /> Abrir</Button>
-            </Link>
+
+          <div>
+            <span className="text-xs font-medium text-muted-foreground">Enlace público (para compartir en redes)</span>
+            <code className="mt-1 block w-full truncate rounded-xl border bg-secondary px-3 py-2 font-mono text-xs sm:text-sm">{humanUrl}</code>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <CopyButton value={humanUrl} className="w-full" />
+              <Link href={`/${profile.slug}`} target="_blank" className="w-full">
+                <Button variant="outline" className="w-full"><ExternalLink className="h-4 w-4" /> Abrir</Button>
+              </Link>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t">
+            <span className="text-xs font-medium text-muted-foreground">Enlace físico permanente (NFC y QR inmutables)</span>
+            <code className="mt-1 block w-full truncate rounded-xl border bg-secondary/60 px-3 py-2 font-mono text-xs sm:text-sm text-violet-600 dark:text-violet-400">{permanentUrl}</code>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Esta URL nunca cambia aunque modifiques tu username en el futuro. Tu tarjeta física siempre funcionará.
+            </p>
           </div>
         </CardContent>
       </Card>

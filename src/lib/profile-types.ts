@@ -47,10 +47,21 @@ export type NfcCardView = {
   assignedAt: string | null;
 };
 
+export type ProfileSource = "MANUAL" | "ECOMMERCE" | "IMPORT" | "INVITE" | "API" | "OTHER";
+export type ProfileStatus = "PENDING_CONFIGURATION" | "CONFIGURING" | "READY";
+export type OnboardingStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED";
+
 export type ProfileView = {
   id: string;
+  publicId?: string | null;
   slug: string;
   active: boolean;
+  source?: ProfileSource;
+  sourceOrderId?: string | null;
+  sourceOrderNumber?: string | null;
+  profileStatus?: ProfileStatus;
+  onboardingStatus?: OnboardingStatus;
+  onboardingStep?: number;
   fullName: string;
   jobTitle?: string | null;
   companyName?: string | null;
