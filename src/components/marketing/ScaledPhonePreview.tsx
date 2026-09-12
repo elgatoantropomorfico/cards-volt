@@ -23,7 +23,7 @@ export function ScaledPhonePreview({
   const h = Math.round(FRAME_H * scale);
 
   return (
-    <div className={cn("relative shrink-0", className)} style={{ width: w, height: h }}>
+    <div className={cn("relative shrink-0 pointer-events-none select-none", className)} style={{ width: w, height: h }} aria-hidden>
       <div
         className="origin-top-left"
         style={{
@@ -45,7 +45,7 @@ export function ScaledPhonePreview({
               className="absolute left-1/2 top-2 z-10 h-[26px] w-[110px] -translate-x-1/2 rounded-full"
               style={{ background: "#0b0f1a" }}
             />
-            <div className="absolute inset-0 pt-0">
+            <div className="pointer-events-none absolute inset-0 pt-0">
               <ProfileRenderer profile={profile} links={links} fluid />
             </div>
           </div>

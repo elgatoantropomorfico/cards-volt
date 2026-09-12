@@ -99,6 +99,13 @@ input[type="number"] { -moz-appearance: textfield; }
   animation: hero-card-float 7s ease-in-out infinite;
 }
 
+@keyframes volt-spin {
+  to { transform: rotate(360deg); }
+}
+.animate-volt-spin {
+  animation: volt-spin 0.85s linear infinite;
+}
+
 /* Phone frame for previews */
 .phone-frame {
   width: 360px;

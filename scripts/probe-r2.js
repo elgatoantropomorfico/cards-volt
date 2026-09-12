@@ -1,38 +1,32 @@
-const { S3Client, HeadBucketCommand, PutObjectCommand, CreateBucketCommand } = require("@aws-sdk/client-s3");
+const { S3Client, HeadBucketCommand, PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
 
 const c = new S3Client({
   region: "auto",
   endpoint: "https://3d0f55e927ee9454adffef55a5cd7eab.r2.cloudflarestorage.com",
   credentials: {
-    accessKeyId: "e878604295e244ae1cb3cb66fa818a99",
-    secretAccessKey: "7a00c88d242219a240b8c5f1545585864967497a66c1ac6f1488eee16d308d85",
+    accessKeyId: "e34ee51f4dcd6d961cf09151bd60a428",
+    secretAccessKey: "eb345b51514a87a822d5313923cbe50d37dc81f5cec8ccfd3074a91c80ebade7",
   },
 });
 
 (async () => {
-  const tries = ["volt-cards", "voltcards", "volt_cards", "cards", "cards-volt", "volt", "voltaiagents"];
-  for (const b of tries) {
-    try {
-      await c.send(new HeadBucketCommand({ Bucket: b }));
-      console.log("HEAD OK:", b);
-    } catch (e) {
-      console.log("HEAD FAIL", b, "->", e.$metadata && e.$metadata.httpStatusCode, e.name);
-    }
-  }
-
-  // Try creating volt-cards
+  const Bucket = "volt-cards-media";
   try {
-    await c.send(new CreateBucketCommand({ Bucket: "volt-cards" }));
-    console.log("CREATED volt-cards");
+    await c.send(new HeadBucketCommand({ Bucket }));
+    console.log("HEAD OK:", Bucket);
   } catch (e) {
-    console.log("CREATE FAIL volt-cards ->", e.name, e.message);
+    console.log("HEAD FAIL", Bucket, e.$metadata?.httpStatusCode, e.name, e.message);
   }
-
-  // Try a PUT
   try {
-    await c.send(new PutObjectCommand({ Bucket: "volt-cards", Key: "probe.txt", Body: "hi", ContentType: "text/plain" }));
-    console.log("PUT OK volt-cards");
+    await c.send(new PutObjectCommand({ Bucket, Key: "probe.txt", Body: "hi from probe", ContentType: "text/plain" }));
+    console.log("PUT OK");
   } catch (e) {
-    console.log("PUT FAIL volt-cards ->", e.name, e.message);
+    console.log("PUT FAIL", e.name, e.message);
+  }
+  try {
+    await c.send(new GetObjectCommand({ Bucket, Key: "probe.txt" }));
+    console.log("GET OK");
+  } catch (e) {
+    console.log("GET FAIL", e.name, e.message);
   }
 })();

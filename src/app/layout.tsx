@@ -35,6 +35,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning
       className={`${inter.variable} ${display.variable} ${mono.variable}`}
     >
+      <head>
+        <link rel="preload" as="image" href="/brand/volt-mark.png" />
+        <link rel="preload" as="image" href="/cards/front-black.png" />
+        <link rel="preload" as="image" href="/cards/front-white.png" />
+      </head>
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         {children}
         <Toaster />

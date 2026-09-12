@@ -1,52 +1,51 @@
 "use client";
 
-import { NfcCardVisual } from "./NfcCardVisual";
+import * as React from "react";
+import { CardScene } from "./cards3d/CardScene";
+import { useLandingBoot } from "./LandingBoot";
 import { cn } from "@/lib/utils";
 
-/**
- * Hero cards — sin parallax ni motion wrappers en la negra.
- * El flip es idéntico al catálogo (mismo NfcCardVisual, sin transforms padre).
- */
 export function HeroCards3D({ fill = false }: { fill?: boolean }) {
+  const boot = useLandingBoot();
+  const [ready, setReady] = React.useState(false);
+  const [mountScene, setMountScene] = React.useState(false);
+  const signaled = React.useRef(false);
+
+  React.useEffect(() => {
+    const id = window.requestAnimationFrame(() => setMountScene(true));
+    return () => window.cancelAnimationFrame(id);
+  }, []);
+
+  const handleReady = React.useCallback(() => {
+    setReady(true);
+    if (!signaled.current) {
+      signaled.current = true;
+      boot?.markHeroReady();
+    }
+  }, [boot]);
+
   return (
-    <div className="flex w-full items-center justify-center py-2">
-      <div
-        className={cn(
-          "relative flex w-full items-center justify-center",
-          fill
-            ? "h-[min(440px,52vh)] max-w-[640px] lg:h-[min(480px,56vh)]"
-            : "h-[min(340px,72vw)] max-w-[520px] sm:h-[360px]",
-        )}
-      >
-        <div className="pointer-events-none absolute inset-0 mx-auto max-w-[420px] rounded-full bg-gradient-mesh opacity-50 blur-3xl" />
-
-        <div
+    <div
+      className={cn(
+        "relative w-full",
+        ready ? "overflow-visible" : "overflow-hidden",
+        "w-[min(100%,780px)] sm:w-[min(100%,820px)] lg:w-[min(100%,880px)]",
+        "-mx-3 sm:-mx-1 md:-mr-6 lg:-mr-8",
+        fill
+          ? "h-[min(580px,70vh)] lg:h-[min(640px,74vh)]"
+          : "h-[min(440px,78vw)] sm:h-[480px]",
+      )}
+    >
+      {mountScene ? (
+        <CardScene
           className={cn(
-            "relative w-[min(100%,460px)]",
-            fill ? "h-[340px] max-w-[560px] lg:h-[380px]" : "h-[280px] max-w-[460px]",
+            "absolute inset-0 transition-opacity duration-500",
+            ready ? "opacity-100 overflow-visible" : "opacity-0 overflow-hidden",
           )}
-        >
-          <div
-            className={cn(
-              "pointer-events-none absolute top-1/2 z-10 -translate-y-[54%] -rotate-[12deg]",
-              fill ? "left-[4%]" : "left-[2%] sm:left-[6%]",
-            )}
-          >
-            <div className="animate-hero-card-float">
-              <NfcCardVisual variant="white" size={fill ? "hero-lg" : "hero"} flippable={false} />
-            </div>
-          </div>
-
-          <div
-            className={cn(
-              "absolute top-1/2 z-20 -translate-y-1/2",
-              fill ? "right-[4%]" : "right-[2%] sm:right-[6%]",
-            )}
-          >
-            <NfcCardVisual variant="black" size={fill ? "hero-lg" : "hero"} />
-          </div>
-        </div>
-      </div>
+          mode="hero"
+          onReady={handleReady}
+        />
+      ) : null}
     </div>
   );
 }

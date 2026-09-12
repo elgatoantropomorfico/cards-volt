@@ -15,7 +15,7 @@ export function LandingHeader() {
   const { count } = useCart();
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/75 backdrop-blur-xl">
+    <header className="fixed inset-x-0 top-0 z-40 border-b border-black/5 bg-background/70 backdrop-blur-xl">
       <div className="container flex h-16 items-center justify-between gap-4">
         <Link href="/" className="flex shrink-0 items-center gap-2">
           <span className="grid h-8 w-8 place-items-center rounded-xl bg-foreground text-background shadow-soft">
