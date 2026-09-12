@@ -113,6 +113,7 @@ export function HeroBeatTypography({
   rightSweep = 0,
   accentRight = false,
   rightLines,
+  rightOffsetClassName,
   layout = "sides",
   className,
 }: {
@@ -124,6 +125,7 @@ export function HeroBeatTypography({
   rightSweep?: number;
   accentRight?: boolean;
   rightLines?: [string, string];
+  rightOffsetClassName?: string;
   /** sides = desktop L/R; stack = mobile top/bottom; diagonal = Acercá UL / Conectá BR */
   layout?: HeroBeatLayout;
   className?: string;
@@ -222,12 +224,21 @@ export function HeroBeatTypography({
         />
         <div aria-hidden />
         {rightLines ? (
-          <div className="flex min-w-0 translate-x-[calc(10%+14px)] flex-col items-start gap-0 text-left leading-none sm:translate-x-[calc(20%+20px)] md:translate-x-[calc(22%+24px)]">
+          <div
+            className={cn(
+              "flex min-w-0 flex-col items-start gap-0 text-left leading-none",
+              rightOffsetClassName ??
+                "translate-x-[calc(10%+14px)] sm:translate-x-[calc(20%+20px)] md:translate-x-[calc(22%+24px)]",
+            )}
+          >
             {rightBlock}
           </div>
         ) : (
           <div
-            className="translate-x-[calc(10%+14px)] sm:translate-x-[calc(20%+20px)] md:translate-x-[calc(22%+24px)]"
+            className={cn(
+              rightOffsetClassName ??
+                "translate-x-[calc(6%+10px)] sm:translate-x-[calc(10%+10px)]",
+            )}
             style={{ wordSpacing: "-0.12em" }}
           >
             {rightBlock}
