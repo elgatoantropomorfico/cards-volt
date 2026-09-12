@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Canvas, useThree } from "@react-three/fiber";
-import { Environment, useTexture } from "@react-three/drei";
+import { Environment, useEnvironment, useTexture } from "@react-three/drei";
 import { Card3D } from "./Card3D";
 import { CardLighting } from "./CardLighting";
 import { CardStack } from "./CardStack";
@@ -18,6 +18,7 @@ if (typeof window !== "undefined") {
     CARD_ASSETS.backBlack,
     CARD_ASSETS.backWhite,
   ]);
+  useEnvironment.preload({ files: CARD_ASSETS.environmentHdr });
 }
 
 function DemandInvalidate() {
@@ -54,7 +55,7 @@ function HeroSceneContent({
     <>
       <ReadySignal onReady={onReady} />
       <CardLighting />
-      <Environment preset="city" environmentIntensity={0.25} />
+      <Environment files={CARD_ASSETS.environmentHdr} environmentIntensity={0.25} />
       <CardStack
         hoverEnabled={hoverEnabled}
         interactive={interactive}
@@ -77,7 +78,7 @@ function StaticSceneContent({
     <>
       <ReadySignal onReady={onReady} />
       <CardLighting />
-      <Environment preset="city" environmentIntensity={0.22} />
+      <Environment files={CARD_ASSETS.environmentHdr} environmentIntensity={0.22} />
       <DemandInvalidate />
       <group position={[0, 0.02, 0]} scale={0.92}>
         <Card3D

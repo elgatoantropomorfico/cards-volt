@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { ContactShadows, Environment, useTexture } from "@react-three/drei";
+import { ContactShadows, Environment, useEnvironment, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 import { CARD_ASSETS } from "@/lib/card-assets";
@@ -70,6 +70,7 @@ if (typeof window !== "undefined") {
     CARD_ASSETS.backBlack,
     CARD_ASSETS.backWhite,
   ]);
+  useEnvironment.preload({ files: CARD_ASSETS.environmentHdr });
 }
 
 let rectAreaReady = false;
@@ -452,7 +453,7 @@ function SceneBody({
       />
       <ProductCamera sampleRef={sampleRef} viewportFitRef={viewportFitRef} />
       <ProductLighting sampleRef={sampleRef} />
-      <Environment preset="city" environmentIntensity={0.22} />
+      <Environment files={CARD_ASSETS.environmentHdr} environmentIntensity={0.22} />
 
       <group ref={stackRef}>
         <VoltCard

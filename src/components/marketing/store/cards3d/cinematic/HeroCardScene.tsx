@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { ContactShadows, Environment, useTexture } from "@react-three/drei";
+import { ContactShadows, Environment, useEnvironment, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { CARD_ASSETS } from "@/lib/card-assets";
 import { HERO_CAMERA_FINAL } from "../heroFinal";
@@ -23,6 +23,7 @@ if (typeof window !== "undefined") {
     CARD_ASSETS.backBlack,
     CARD_ASSETS.backWhite,
   ]);
+  useEnvironment.preload({ files: CARD_ASSETS.environmentHdr });
 }
 
 function ReadySignal({ onReady }: { onReady?: () => void }) {
@@ -139,7 +140,7 @@ function SceneBody({
       />
       <HeroCardCamera sampleRef={sampleRef} />
       <HeroCardLighting sampleRef={sampleRef} />
-      <Environment preset="city" environmentIntensity={0.25} />
+      <Environment files={CARD_ASSETS.environmentHdr} environmentIntensity={0.25} />
 
       <group ref={stackRef}>
         <VoltCard

@@ -6,6 +6,7 @@ export const CARD_ASSETS = {
   frontWhite: "/cards/front-white.png",
   backBlack: "/cards/back-black.png",
   backWhite: "/cards/back-white.png",
+  environmentHdr: "/hdr/potsdamer_platz_1k.hdr",
 } as const;
 
 export const DEG = Math.PI / 180;
