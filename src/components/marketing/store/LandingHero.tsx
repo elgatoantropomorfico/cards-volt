@@ -22,6 +22,7 @@ function viewOptsFromFit(fit: SceneViewportFit): SequenceViewOpts {
     orbitRadiusMul: fit.orbitRadiusMul,
     orbitTipMul: fit.orbitTipMul,
     dollyZMul: fit.dollyZMul,
+    isMobile: fit.isMobile,
   };
 }
 
@@ -156,11 +157,12 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
     (p: number) => {
       if (reducedMotion || introLockedRef.current) return;
       // Lock on the last scroll frame — don't wait for damp catch-up
-      if (p >= 0.992) {
+      const lockThreshold = isDesktop ? 0.992 : 0.945;
+      if (p >= lockThreshold) {
         lockIntro();
       }
     },
-    [reducedMotion, lockIntro],
+    [isDesktop, reducedMotion, lockIntro],
   );
 
   useScrollProgress(trackRef, progressTargetRef, {
@@ -219,7 +221,7 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
       // Chip only through the opening flip, then gone
       setSkipVisible(!introLockedRef.current && p < 0.11);
 
-      const lockThreshold = isDesktop ? 0.992 : 0.985;
+      const lockThreshold = isDesktop ? 0.992 : 0.945;
       if (!introLockedRef.current && (p >= lockThreshold || target >= lockThreshold)) {
         lockIntro();
       }
@@ -268,7 +270,7 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
         className={cn(
           "w-full",
           isMobileLocked
-            ? "relative h-auto pt-16 pb-10 sm:pt-20 sm:pb-14"
+            ? "relative h-auto pt-[max(5.25rem,11%)] pb-10 sm:pb-14"
             : "sticky top-0 h-[100dvh] overflow-hidden",
         )}
       >
@@ -388,12 +390,10 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
                 </span>
               </h1>
 
-              {/* Mobile static 3D cards: exact original model, responsive height, no dead space */}
-              {isMobileLocked ? (
-                <div className="my-3 flex justify-center md:hidden w-full">
-                  <HeroCards3D className="h-[250px] sm:h-[290px] w-full max-w-[340px]" />
-                </div>
-              ) : null}
+              {/* Mobile static 3D cards: exact original model, responsive height, preloaded */}
+              <div className="my-3 flex justify-center md:hidden w-full">
+                <HeroCards3D className="h-[250px] sm:h-[290px] w-full max-w-[340px]" />
+              </div>
 
               <p className="mt-4 max-w-lg text-pretty text-[15px] leading-relaxed text-muted-foreground md:mt-6 md:text-[17px]">
                 Blanca o negra, con NFC y QR integrados. Incluye Volt Cards Social Media: editá tu

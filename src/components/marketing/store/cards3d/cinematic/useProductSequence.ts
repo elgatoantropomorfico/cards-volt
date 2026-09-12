@@ -135,6 +135,7 @@ export type SequenceViewOpts = {
   orbitRadiusMul?: number;
   orbitTipMul?: number;
   dollyZMul?: number;
+  isMobile?: boolean;
 };
 
 /** Dolly out only — same lookAt/FOV, objects frozen */
@@ -250,48 +251,91 @@ export function sampleProductSequence(
     camera = sampleOrbitCamera(t, viewOpts);
   }
 
-  // ——— Continuous exit: phone fade+fall, card rises/rotates to hero ———
+  // ——— Continuous exit ———
   if (p > exitStart) {
-    const t = cineInOut(clamp01((p - exitStart) / (1 - exitStart)));
-    const endCam = orbitEndCamera(viewOpts);
-    const heroCam = {
-      position: [
-        HERO_CAMERA_FINAL.position[0] - 0.45,
-        HERO_CAMERA_FINAL.position[1],
-        HERO_CAMERA_FINAL.position[2] + 0.7,
-      ] as Vec3,
-      lookAt: [
-        HERO_CAMERA_FINAL.lookAt[0] + 0.2,
-        HERO_CAMERA_FINAL.lookAt[1],
-        HERO_CAMERA_FINAL.lookAt[2],
-      ] as Vec3,
-      fov: HERO_CAMERA_FINAL.fov,
-    };
-    camera = {
-      position: lerpVec3(endCam.position, heroCam.position, t),
-      lookAt: lerpVec3(endCam.lookAt, heroCam.lookAt, t),
-      fov: lerp(endCam.fov, heroCam.fov, t),
-    };
+    if (viewOpts.isMobile) {
+      // Mobile exit: camera pushes smoothly forward through the black card (QR facing camera),
+      // and the black card disappears once traversed (~0.94). Cards never return; hero fades in.
+      const t = clamp01((p - exitStart) / (0.94 - exitStart));
+      const endCam = orbitEndCamera(viewOpts);
 
-    black = lerpPose(NFC_LOCK.black, HERO_BLACK_FINAL, t);
-    phoneBase = {
-      position: [
-        NFC_LOCK.phone.position[0],
-        lerp(NFC_LOCK.phone.position[1], -6.2, cineOut(t)),
-        NFC_LOCK.phone.position[2],
-      ] as Vec3,
-      rotation: [...NFC_LOCK.phone.rotation] as Vec3,
-      scale: lerp(NFC_LOCK.phone.scale, NFC_LOCK.phone.scale * 0.92, t),
-    };
-    phoneOpacity = 1 - cineOut(clamp01(t / 0.85));
-    phoneScreen = NFC_LOCK.phone.screen * (1 - t);
-    phoneGlow = 0;
-    phoneIsland = NFC_LOCK.phone.island * (1 - t);
+      camera = {
+        position: [
+          lerp(endCam.position[0], NFC_LOCK.black.position[0], cineInOut(t * 0.9)),
+          lerp(endCam.position[1], NFC_LOCK.black.position[1], cineInOut(t * 0.7)),
+          lerp(endCam.position[2], 1.2, cineInOut(t)),
+        ] as Vec3,
+        lookAt: [
+          lerp(endCam.lookAt[0], NFC_LOCK.black.position[0], t),
+          lerp(endCam.lookAt[1], NFC_LOCK.black.position[1], t),
+          NFC_LOCK.black.position[2],
+        ] as Vec3,
+        fov: endCam.fov,
+      };
+
+      // Black card holds its QR orientation; once traversed by the camera lens, it vanishes completely
+      const passed = camera.position[2] >= NFC_LOCK.black.position[2] - 0.2 || t >= 0.82;
+      black = {
+        position: [...NFC_LOCK.black.position] as Vec3,
+        rotation: [...NFC_LOCK.black.rotation] as Vec3,
+        scale: passed ? 0 : NFC_LOCK.black.scale,
+      };
+
+      phoneBase = {
+        position: [
+          NFC_LOCK.phone.position[0],
+          lerp(NFC_LOCK.phone.position[1], -6.2, cineOut(t)),
+          NFC_LOCK.phone.position[2],
+        ] as Vec3,
+        rotation: [...NFC_LOCK.phone.rotation] as Vec3,
+        scale: lerp(NFC_LOCK.phone.scale, NFC_LOCK.phone.scale * 0.92, t),
+      };
+      phoneOpacity = 1 - cineOut(clamp01(t / 0.7));
+      phoneScreen = NFC_LOCK.phone.screen * (1 - t);
+      phoneGlow = 0;
+      phoneIsland = NFC_LOCK.phone.island * (1 - t);
+    } else {
+      const t = cineInOut(clamp01((p - exitStart) / (1 - exitStart)));
+      const endCam = orbitEndCamera(viewOpts);
+      const heroCam = {
+        position: [
+          HERO_CAMERA_FINAL.position[0] - 0.45,
+          HERO_CAMERA_FINAL.position[1],
+          HERO_CAMERA_FINAL.position[2] + 0.7,
+        ] as Vec3,
+        lookAt: [
+          HERO_CAMERA_FINAL.lookAt[0] + 0.2,
+          HERO_CAMERA_FINAL.lookAt[1],
+          HERO_CAMERA_FINAL.lookAt[2],
+        ] as Vec3,
+        fov: HERO_CAMERA_FINAL.fov,
+      };
+      camera = {
+        position: lerpVec3(endCam.position, heroCam.position, t),
+        lookAt: lerpVec3(endCam.lookAt, heroCam.lookAt, t),
+        fov: lerp(endCam.fov, heroCam.fov, t),
+      };
+
+      black = lerpPose(NFC_LOCK.black, HERO_BLACK_FINAL, t);
+      phoneBase = {
+        position: [
+          NFC_LOCK.phone.position[0],
+          lerp(NFC_LOCK.phone.position[1], -6.2, cineOut(t)),
+          NFC_LOCK.phone.position[2],
+        ] as Vec3,
+        rotation: [...NFC_LOCK.phone.rotation] as Vec3,
+        scale: lerp(NFC_LOCK.phone.scale, NFC_LOCK.phone.scale * 0.92, t),
+      };
+      phoneOpacity = 1 - cineOut(clamp01(t / 0.85));
+      phoneScreen = NFC_LOCK.phone.screen * (1 - t);
+      phoneGlow = 0;
+      phoneIsland = NFC_LOCK.phone.island * (1 - t);
+    }
   }
 
-  // White only after black has come back through camera (late exit) — never pop mid-orbit
+  // White only after black has come back through camera (late exit) — never in mobile
   let whiteReveal = 0;
-  if (p > exitStart) {
+  if (!viewOpts.isMobile && p > exitStart) {
     const t = cineInOut(clamp01((p - exitStart) / (1 - exitStart)));
     whiteReveal = t < 0.62 ? 0 : cineOut((t - 0.62) / 0.38);
   }
@@ -302,9 +346,9 @@ export function sampleProductSequence(
     reveal: whiteReveal,
   };
 
-  // Layout bias only after phone is mostly gone — soft park to the right
+  // Layout bias only after phone is mostly gone — soft park to the right (desktop only)
   const layoutGate =
-    p > exitStart
+    !viewOpts.isMobile && p > exitStart
       ? cineOut(clamp01((cineInOut(clamp01((p - exitStart) / (1 - exitStart))) - 0.45) / 0.55))
       : 0;
   const layoutOffset: Vec3 = [layoutBias.x * layoutGate, layoutBias.y * layoutGate, 0];
@@ -316,9 +360,14 @@ export function sampleProductSequence(
     stackPos = [0, 0, 0];
     stackScale = 1;
   } else if (p >= exitStart) {
-    const t = cineInOut(clamp01((p - exitStart) / (1 - exitStart)));
-    stackPos = lerpVec3([0, 0, 0], [...HERO_STACK_FINAL.position] as Vec3, t);
-    stackScale = lerp(1, HERO_STACK_FINAL.scale, t);
+    if (viewOpts.isMobile) {
+      stackPos = [0, 0, 0];
+      stackScale = 1;
+    } else {
+      const t = cineInOut(clamp01((p - exitStart) / (1 - exitStart)));
+      stackPos = lerpVec3([0, 0, 0], [...HERO_STACK_FINAL.position] as Vec3, t);
+      stackScale = lerp(1, HERO_STACK_FINAL.scale, t);
+    }
   }
 
   const text = {
@@ -336,9 +385,13 @@ export function sampleProductSequence(
     },
   };
 
-  // Hero UI / card self-glow kick in during exit — earlier so lock doesn't feel stalled
-  const contentOpacity = cineOut(clamp01((p - 0.9) / 0.1));
-  const settled = cineOut(clamp01((p - 0.92) / 0.08));
+  // Hero UI kicks in: in mobile, right when the QR card starts passing through camera (~0.885 to 0.94)
+  const contentOpacity = viewOpts.isMobile
+    ? cineOut(clamp01((p - 0.885) / 0.055))
+    : cineOut(clamp01((p - 0.9) / 0.1));
+  const settled = viewOpts.isMobile
+    ? (p >= 0.94 ? 1 : 0)
+    : cineOut(clamp01((p - 0.92) / 0.08));
 
   return {
     camera,

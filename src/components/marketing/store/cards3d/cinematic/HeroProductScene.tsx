@@ -25,6 +25,7 @@ function viewOptsFromFit(fit: SceneViewportFit): SequenceViewOpts {
     orbitRadiusMul: fit.orbitRadiusMul,
     orbitTipMul: fit.orbitTipMul,
     dollyZMul: fit.dollyZMul,
+    isMobile: fit.isMobile,
   };
 }
 
@@ -42,12 +43,14 @@ export type SceneViewportFit = {
   dollyZMul?: number;
   /** Mobile: fade cards out into text-only hero */
   hideFinalCards?: boolean;
+  isMobile?: boolean;
 };
 
 export const DESKTOP_VIEWPORT_FIT: SceneViewportFit = {
   scale: 1,
   fovAdd: 0,
   distanceMul: 1,
+  isMobile: false,
 };
 
 export const MOBILE_VIEWPORT_FIT: SceneViewportFit = {
@@ -57,10 +60,11 @@ export const MOBILE_VIEWPORT_FIT: SceneViewportFit = {
   /** ≈ stack×black final presence — intro starts here, barely grows */
   cinematicCardScale: 0.76,
   orbitElevMul: 0.38,
-  orbitRadiusMul: 0.68,
+  orbitRadiusMul: 1,
   orbitTipMul: 0.4,
-  dollyZMul: 0.55,
+  dollyZMul: 0.7,
   hideFinalCards: false,
+  isMobile: true,
 };
 
 if (typeof window !== "undefined") {
@@ -353,7 +357,7 @@ function AnimationDriver({
       position: sample.black.position,
       rotation: sample.black.rotation,
       scale: blackScale,
-      visible: !hideFinal,
+      visible: !hideFinal && blackScale > 0.001,
     };
     whitePoseRef.current = {
       position: sample.white.position,
