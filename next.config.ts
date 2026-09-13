@@ -19,6 +19,9 @@ const securityHeaders = [
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
       "connect-src 'self' https:",
+      // MapEmbed uses Google Maps iframe embeds on public profiles
+      "frame-src 'self' https://www.google.com https://maps.google.com https://www.google.com/maps/",
+      "child-src 'self' https://www.google.com https://maps.google.com",
       "frame-ancestors 'self'",
       "base-uri 'self'",
       "form-action 'self'",
