@@ -17,10 +17,10 @@ import { toast } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 
 export function FloatingCartIsland() {
-  const { count, items, increment, decrement, setDrawerOpen } = useCart();
+  const { count, items, prices, increment, decrement, setDrawerOpen } = useCart();
   const [expanded, setExpanded] = React.useState(false);
-  const lines = cartLines(items);
-  const total = cartTotal(items);
+  const lines = cartLines(items, prices);
+  const total = cartTotal(items, prices);
 
   return (
     <AnimatePresence>

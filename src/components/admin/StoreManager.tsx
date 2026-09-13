@@ -31,6 +31,7 @@ import {
   updateAdminOrderStatus,
   recordInventoryAdjustment,
   updateStoreSettings,
+  updateAdminProduct,
 } from "@/server/admin-store-actions";
 
 type StoreTab = "dashboard" | "orders" | "products" | "stock" | "shipping" | "settings";
@@ -329,60 +330,7 @@ export function StoreManager({
       )}
 
       {/* PRODUCTS TAB */}
-      {tab === "products" && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {products.map((p) => (
-              <Card key={p.id} className="overflow-hidden">
-                <div className="relative h-44 bg-black/60 flex items-center justify-center border-b">
-                  {p.images?.[0] ? (
-                    <Image
-                      src={p.images[0]}
-                      alt={p.name}
-                      fill
-                      className="object-cover opacity-90"
-                    />
-                  ) : (
-                    <Package className="h-12 w-12 text-muted-foreground/40" />
-                  )}
-                  <div className="absolute top-3 right-3">
-                    <Badge variant={p.active ? "success" : "secondary"}>
-                      {p.active ? "Activo en tienda" : "Inactivo"}
-                    </Badge>
-                  </div>
-                </div>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{p.name}</CardTitle>
-                      <CardDescription className="text-xs font-mono">{p.sku}</CardDescription>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold font-mono text-[#7000FF]">
-                        ${p.price.toLocaleString("es-AR")} ARS
-                      </div>
-                      {p.compareAtPrice && (
-                        <div className="text-xs line-through text-muted-foreground font-mono">
-                          ${p.compareAtPrice.toLocaleString("es-AR")}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-xs text-muted-foreground">{p.shortDescription || p.description}</p>
-                  <div className="flex items-center justify-between pt-2 border-t text-xs">
-                    <span className="text-muted-foreground">Stock físico disponible:</span>
-                    <span className="font-mono font-bold text-sm">
-                      {p.stockQuantity} unidades
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
+      {tab === "products" && <ProductsEditorSection products={products} />}
 
       {/* STOCK & TRAZABILIDAD TAB */}
       {tab === "stock" && (
@@ -419,6 +367,137 @@ export function StoreManager({
       {/* SETTINGS TAB */}
       {tab === "settings" && <StoreSettingsSection settings={settings} />}
     </div>
+  );
+}
+
+/**
+ * Editor de catálogo: precios editables (impactan landing, carrito y Mercado Pago).
+ */
+function ProductsEditorSection({ products }: { products: any[] }) {
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Catálogo editable</CardTitle>
+          <CardDescription>
+            Los precios que guardés acá son la fuente de verdad: landing, carrito y preferencias de Mercado Pago los usan automáticamente.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {products.map((p) => (
+          <ProductEditorCard key={p.id} product={p} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ProductEditorCard({ product }: { product: any }) {
+  const [name, setName] = React.useState(product.name);
+  const [monthly, setMonthly] = React.useState(Number(product.monthlyPrice ?? Number(product.price) / 12));
+  const [annual, setAnnual] = React.useState(Number(product.price));
+  const [stock, setStock] = React.useState(Number(product.stockQuantity ?? 0));
+  const [active, setActive] = React.useState(Boolean(product.active));
+  const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    setName(product.name);
+    setMonthly(Number(product.monthlyPrice ?? Number(product.price) / 12));
+    setAnnual(Number(product.price));
+    setStock(Number(product.stockQuantity ?? 0));
+    setActive(Boolean(product.active));
+  }, [product]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    const res = await updateAdminProduct({
+      productId: product.id,
+      name,
+      monthlyPrice: monthly,
+      price: annual,
+      stockQuantity: stock,
+      active,
+    });
+    setSaving(false);
+    if (res.ok) toast({ title: "Producto actualizado · precios vivos en tienda y MP", variant: "success" });
+    else toast({ title: "Error", description: res.error, variant: "error" });
+  };
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="relative h-36 bg-black/60 flex items-center justify-center border-b">
+        {product.images?.[0] ? (
+          <Image src={product.images[0]} alt={product.name} fill className="object-cover opacity-90" />
+        ) : (
+          <Package className="h-12 w-12 text-muted-foreground/40" />
+        )}
+        <div className="absolute top-3 right-3">
+          <Badge variant={active ? "success" : "secondary"}>
+            {active ? "Activo en tienda" : "Inactivo"}
+          </Badge>
+        </div>
+      </div>
+      <CardHeader className="pb-2">
+        <CardDescription className="text-xs font-mono">{product.sku || product.slug}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3 text-xs">
+        <div>
+          <label className="block font-medium mb-1">Nombre</label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full bg-secondary border rounded-lg px-3 py-2"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block font-medium mb-1">Precio mensual (ARS)</label>
+            <input
+              type="number"
+              min={0}
+              value={monthly}
+              onChange={(e) => {
+                const m = Number(e.target.value);
+                setMonthly(m);
+                setAnnual(m * 12);
+              }}
+              className="w-full bg-secondary border rounded-lg px-3 py-2 font-mono"
+            />
+          </div>
+          <div>
+            <label className="block font-medium mb-1">Precio anual / MP (ARS)</label>
+            <input
+              type="number"
+              min={0}
+              value={annual}
+              onChange={(e) => setAnnual(Number(e.target.value))}
+              className="w-full bg-secondary border rounded-lg px-3 py-2 font-mono"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 items-end">
+          <div>
+            <label className="block font-medium mb-1">Stock físico</label>
+            <input
+              type="number"
+              min={0}
+              value={stock}
+              onChange={(e) => setStock(Number(e.target.value))}
+              className="w-full bg-secondary border rounded-lg px-3 py-2 font-mono"
+            />
+          </div>
+          <label className="flex items-center gap-2 pb-2 cursor-pointer">
+            <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
+            <span className="font-medium">Visible en tienda</span>
+          </label>
+        </div>
+        <Button size="sm" onClick={handleSave} disabled={saving} className="w-full gap-2 mt-1">
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+          Guardar precios
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

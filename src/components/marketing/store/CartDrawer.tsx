@@ -10,9 +10,9 @@ import { cartLines, cartTotal, formatArs } from "@/lib/store-products";
 import { ProductCardPreview } from "./ProductCardPreview";
 
 export function CartDrawer() {
-  const { drawerOpen, setDrawerOpen, items, increment, decrement, setQuantity, clearCart } = useCart();
-  const lines = cartLines(items);
-  const total = cartTotal(items);
+  const { drawerOpen, setDrawerOpen, items, prices, increment, decrement, setQuantity, clearCart } = useCart();
+  const lines = cartLines(items, prices);
+  const total = cartTotal(items, prices);
 
   // Close with Escape key
   React.useEffect(() => {

@@ -15,8 +15,10 @@ import { cn } from "@/lib/utils";
 function ProductCard({ productId }: { productId: ProductId }) {
   const product = STORE_PRODUCTS.find((p) => p.id === productId)!;
   const qty = useCartQuantity(productId);
-  const { increment, decrement, addOne } = useCart();
-  const annual = annualUnitPrice(product.monthlyPrice);
+  const { increment, decrement, addOne, prices } = useCart();
+  const live = prices[productId];
+  const monthly = live?.monthlyPrice ?? product.monthlyPrice;
+  const annual = live?.annualPrice ?? annualUnitPrice(monthly);
 
   return (
     <article
@@ -45,7 +47,7 @@ function ProductCard({ productId }: { productId: ProductId }) {
         <p className="mt-1 text-sm text-muted-foreground">{product.tagline}</p>
 
         <div className="mt-4 flex items-baseline gap-1.5">
-          <span className="font-display text-2xl font-semibold">{formatArs(product.monthlyPrice)}</span>
+          <span className="font-display text-2xl font-semibold">{formatArs(monthly)}</span>
           <span className="text-sm text-muted-foreground">/ mes</span>
         </div>
         <p className="mt-1 text-[12px] text-muted-foreground">

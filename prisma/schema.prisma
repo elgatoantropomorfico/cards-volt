@@ -185,6 +185,7 @@ model Profile {
   links        Link[]
   card         NfcCard?
   orders       Order[]
+  seats        OrderSeat[]
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -426,6 +427,7 @@ model Order {
   items               OrderItem[]
   payments            Payment[]
   events              OrderEvent[]
+  seats               OrderSeat[]
 
   paidAt              DateTime?
   fulfilledAt         DateTime?
@@ -439,6 +441,36 @@ model Order {
   @@index([fulfillmentStatus])
   @@index([shippingStatus])
   @@map("orders")
+}
+
+enum OrderSeatStatus {
+  PRIMARY
+  PENDING_ASSIGNMENT
+  ASSIGNED
+  CONFIGURED
+}
+
+/// One physical Volt Card unit within an order.
+/// Multi-card purchases create N seats: 1 PRIMARY (buyer wizard) + N-1 quick user allotments.
+model OrderSeat {
+  id             String          @id @default(cuid())
+  orderId        String
+  order          Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String
+  seatIndex      Int
+  status         OrderSeatStatus @default(PENDING_ASSIGNMENT)
+  profileId      String?
+  profile        Profile?        @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  assigneeEmail  String?
+  assigneeName   String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@unique([orderId, seatIndex])
+  @@index([orderId])
+  @@index([profileId])
+  @@index([status])
+  @@map("order_seats")
 }
 
 model OrderItem {

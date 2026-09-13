@@ -223,5 +223,9 @@ export async function finalizeOnboarding(input: { orderId: string; profileId: st
   revalidatePath(`/c/${order.profile?.publicId}`);
   revalidatePath(`/admin`);
 
-  return { ok: true };
+  const pendingSeats = await prisma.orderSeat.count({
+    where: { orderId: input.orderId, status: "PENDING_ASSIGNMENT" },
+  });
+
+  return { ok: true, pendingSeats };
 }

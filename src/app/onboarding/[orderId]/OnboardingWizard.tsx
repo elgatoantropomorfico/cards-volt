@@ -194,6 +194,10 @@ export function OnboardingWizard({
     });
     setFinishing(false);
     if (res.ok) {
+      if (res.pendingSeats && res.pendingSeats > 0) {
+        router.push(`/onboarding/${order.id}/seats`);
+        return;
+      }
       setFinished(true);
     }
   };

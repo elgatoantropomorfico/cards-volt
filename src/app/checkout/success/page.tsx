@@ -1,19 +1,25 @@
 "use client";
 
 import React, { useEffect, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, Loader2, Sparkles, ArrowRight, ShieldCheck, RefreshCw } from "lucide-react";
 
 function SuccessContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const orderId = searchParams.get("orderId") || searchParams.get("external_reference");
+  const paymentId =
+    searchParams.get("payment_id") ||
+    searchParams.get("collection_id") ||
+    searchParams.get("paymentId");
 
   const [status, setStatus] = useState<"checking" | "approved" | "pending" | "error">("checking");
   const [orderInfo, setOrderInfo] = useState<{
     orderNumber: string;
     profileId: string | null;
   } | null>(null);
+  const [redirectIn, setRedirectIn] = useState<number | null>(null);
 
   useEffect(() => {
     if (!orderId) {
@@ -21,15 +27,29 @@ function SuccessContent() {
       return;
     }
 
-    let intervalId: any;
+    let intervalId: ReturnType<typeof setInterval> | undefined;
     let attempts = 0;
+    let cancelled = false;
 
-    const checkOrderStatus = async () => {
+    const confirmAndCheck = async () => {
       try {
         attempts++;
+
+        // 1) Try to confirm via MP payment id from redirect (webhook may lag)
+        if (paymentId || attempts === 1) {
+          await fetch(`/api/orders/${orderId}/confirm`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId, paymentId }),
+          }).catch(() => null);
+        }
+
+        // 2) Poll status
         const res = await fetch(`/api/orders/${orderId}/status`);
         if (!res.ok) throw new Error("Order not found");
         const data = await res.json();
+
+        if (cancelled) return;
 
         if (data.paymentStatus === "APPROVED") {
           setStatus("approved");
@@ -37,27 +57,40 @@ function SuccessContent() {
             orderNumber: data.orderNumber,
             profileId: data.profileId,
           });
-          clearInterval(intervalId);
-        } else if (attempts > 15) {
-          // Si después de 30 segundos sigue en pending, dejamos la UI en pending amigable
+          if (intervalId) clearInterval(intervalId);
+          // Auto-advance to wizard after a short beat
+          setRedirectIn(3);
+        } else if (attempts > 20) {
           setStatus("pending");
-          clearInterval(intervalId);
+          if (intervalId) clearInterval(intervalId);
         }
       } catch (err) {
         console.error(err);
       }
     };
 
-    // Chequeo inicial
-    checkOrderStatus();
-    intervalId = setInterval(checkOrderStatus, 2500);
+    confirmAndCheck();
+    intervalId = setInterval(confirmAndCheck, 2000);
 
-    return () => clearInterval(intervalId);
-  }, [orderId]);
+    return () => {
+      cancelled = true;
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [orderId, paymentId]);
+
+  // Countdown → wizard
+  useEffect(() => {
+    if (redirectIn === null || !orderId) return;
+    if (redirectIn <= 0) {
+      router.push(`/onboarding/${orderId}`);
+      return;
+    }
+    const t = setTimeout(() => setRedirectIn((n) => (n == null ? null : n - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [redirectIn, orderId, router]);
 
   return (
     <div className="max-w-xl w-full mx-auto p-8 rounded-3xl bg-white/[0.02] border border-white/10 backdrop-blur-xl text-center space-y-8 relative overflow-hidden">
-      {/* Background glow */}
       <div className="absolute -top-32 -left-32 w-64 h-64 bg-[#7000FF]/20 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-[#A855F7]/15 rounded-full blur-3xl pointer-events-none" />
 
@@ -71,12 +104,12 @@ function SuccessContent() {
               Estamos confirmando tu pago...
             </h1>
             <p className="text-white/60 text-sm max-w-sm mx-auto">
-              Aguardá unos segundos mientras procesamos la confirmación con Mercado Pago y preparamos tu perfil.
+              Validamos con Mercado Pago y preparamos tu perfil. En segundos pasás al siguiente paso.
             </p>
           </div>
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-white/50">
             <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-            <span>Sincronizando con webhook</span>
+            <span>Sincronizando pago</span>
           </div>
         </div>
       )}
@@ -103,9 +136,11 @@ function SuccessContent() {
           <div className="p-5 rounded-2xl bg-[#7000FF]/10 border border-[#7000FF]/30 text-left flex items-start gap-3.5">
             <Sparkles className="w-5 h-5 text-[#A855F7] shrink-0 mt-0.5" />
             <div className="text-sm space-y-1">
-              <p className="font-semibold text-white">Falta un último paso:</p>
+              <p className="font-semibold text-white">Siguiente paso: configurá tu perfil</p>
               <p className="text-white/70 text-xs leading-relaxed">
-                Configurá el perfil digital que vamos a vincular a tu tarjeta física para que cuando alguien acerque tu Volt Card o escanee tu QR, vea exactamente lo que querés.
+                {redirectIn != null
+                  ? `Te llevamos al wizard automáticamente en ${redirectIn}s…`
+                  : "Configurá el perfil que vamos a vincular a tu tarjeta física."}
               </p>
             </div>
           </div>
@@ -119,10 +154,6 @@ function SuccessContent() {
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
-
-          <p className="text-xs text-white/40">
-            Podés guardar tu avance y continuar en cualquier momento desde tu cuenta.
-          </p>
         </div>
       )}
 
@@ -136,16 +167,17 @@ function SuccessContent() {
               Pago en proceso de acreditación
             </h1>
             <p className="text-white/60 text-sm max-w-sm mx-auto">
-              Mercado Pago está acreditando tu compra. Te notificaremos por email apenas impacte.
+              Mercado Pago todavía está acreditando. Te avisamos por email apenas impacte; también podés reintentar desde este enlace.
             </p>
           </div>
           <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link
-              href={`/onboarding/${orderId}`}
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
               className="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium text-sm transition-colors"
             >
-              Ir al Wizard preliminar
-            </Link>
+              Reintentar confirmación
+            </button>
             <Link
               href="/"
               className="px-6 py-3 rounded-xl bg-transparent border border-white/10 hover:bg-white/5 text-white/70 font-medium text-sm transition-colors"
@@ -160,7 +192,7 @@ function SuccessContent() {
         <div className="space-y-4 py-4">
           <h1 className="text-xl font-bold text-white">No pudimos encontrar la orden</h1>
           <p className="text-white/60 text-sm">
-            Verificá el enlace o ponete en contacto con nuestro equipo de soporte.
+            Verificá el enlace o contactá soporte.
           </p>
           <div className="pt-4">
             <Link

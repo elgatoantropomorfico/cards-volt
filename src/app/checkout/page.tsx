@@ -10,12 +10,12 @@ import { ArrowLeft, ShieldCheck, Truck, Lock, CreditCard, Sparkles, Loader2 } fr
 import { ProductCardPreview } from "@/components/marketing/store/ProductCardPreview";
 
 export default function CheckoutPage() {
-  const { items, clearCart } = useCart();
+  const { items, prices, clearCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const lines = cartLines(items);
-  const subtotal = cartTotal(items);
+  const lines = cartLines(items, prices);
+  const subtotal = cartTotal(items, prices);
   const shippingCost: number = 0; // Envío gratis en plan anual
   const total = subtotal + shippingCost;
 

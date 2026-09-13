@@ -64,23 +64,28 @@ export type CartLine = {
   quantity: number;
 };
 
-export function cartLines(items: CartLine[]) {
+/** Live annual prices keyed by product slug (white/black). From DB via /api/store/catalog. */
+export type PriceMap = Partial<Record<ProductId, { monthlyPrice: number; annualPrice: number }>>;
+
+export function cartLines(items: CartLine[], prices?: PriceMap) {
   return items
     .filter((i) => i.quantity > 0)
     .map((item) => {
       const product = getProduct(item.productId);
-      const annualEach = annualUnitPrice(product.monthlyPrice);
+      const live = prices?.[item.productId];
+      const monthly = live?.monthlyPrice ?? product.monthlyPrice;
+      const annualEach = live?.annualPrice ?? annualUnitPrice(monthly);
       return {
         ...item,
-        product,
+        product: { ...product, monthlyPrice: monthly },
         annualEach,
         lineTotal: annualEach * item.quantity,
       };
     });
 }
 
-export function cartTotal(items: CartLine[]): number {
-  return cartLines(items).reduce((sum, line) => sum + line.lineTotal, 0);
+export function cartTotal(items: CartLine[], prices?: PriceMap): number {
+  return cartLines(items, prices).reduce((sum, line) => sum + line.lineTotal, 0);
 }
 
 export function cartItemCount(items: CartLine[]): number {

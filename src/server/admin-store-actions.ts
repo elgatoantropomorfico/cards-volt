@@ -191,6 +191,56 @@ export async function recordInventoryAdjustment(input: {
 /**
  * Guarda credenciales de configuración de la tienda (Mercado Pago, Mercado Envíos)
  */
+export async function updateAdminProduct(input: {
+  productId: string;
+  price?: number;
+  monthlyPrice?: number;
+  compareAtPrice?: number | null;
+  active?: boolean;
+  name?: string;
+  shortDescription?: string | null;
+  stockQuantity?: number;
+}) {
+  await requireRole("SUPERADMIN");
+
+  const product = await prisma.product.findUnique({ where: { id: input.productId } });
+  if (!product) return { ok: false as const, error: "Producto no encontrado" };
+
+  const data: Record<string, unknown> = {};
+  if (input.price !== undefined) {
+    if (input.price < 0) return { ok: false as const, error: "El precio anual no puede ser negativo" };
+    data.price = input.price;
+  }
+  if (input.monthlyPrice !== undefined) {
+    if (input.monthlyPrice < 0) return { ok: false as const, error: "El precio mensual no puede ser negativo" };
+    data.monthlyPrice = input.monthlyPrice;
+    // Si solo cambian el mensual y no el anual, recalcular anual (×12)
+    if (input.price === undefined) {
+      data.price = input.monthlyPrice * 12;
+    }
+  }
+  if (input.compareAtPrice !== undefined) data.compareAtPrice = input.compareAtPrice;
+  if (input.active !== undefined) data.active = input.active;
+  if (input.name !== undefined) data.name = input.name.trim();
+  if (input.shortDescription !== undefined) data.shortDescription = input.shortDescription?.trim() || null;
+  if (input.stockQuantity !== undefined) {
+    if (input.stockQuantity < 0) return { ok: false as const, error: "Stock inválido" };
+    data.stockQuantity = input.stockQuantity;
+  }
+
+  await prisma.product.update({
+    where: { id: input.productId },
+    data,
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/");
+  return { ok: true as const };
+}
+
+/**
+ * Guarda credenciales de configuración de la tienda (Mercado Pago, Mercado Envíos)
+ */
 export async function updateStoreSettings(input: {
   mpAccessToken?: string;
   mpPublicKey?: string;

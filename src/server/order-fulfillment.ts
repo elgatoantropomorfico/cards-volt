@@ -193,13 +193,56 @@ export async function handleApprovedOrder({
           {
             type: "profile.created",
             title: "Perfil digital creado",
-            detail: `Perfil creado con slug provisional /${profile.slug} esperando configuración del cliente`,
+            detail: `Perfil principal creado con slug provisional /${profile.slug} (wizard del comprador)`,
           },
         ],
       },
     },
     include: { profile: true, items: true, events: true },
   });
+
+  // 6. Create one seat per physical card unit (idempotent)
+  const existingSeats = await prisma.orderSeat.count({ where: { orderId: order.id } });
+  if (existingSeats === 0) {
+    let seatIndex = 0;
+    const seatCreates: {
+      orderId: string;
+      productId: string;
+      seatIndex: number;
+      status: "PRIMARY" | "PENDING_ASSIGNMENT";
+      profileId: string | null;
+    }[] = [];
+
+    for (const item of order.items) {
+      for (let q = 0; q < item.quantity; q++) {
+        const isPrimary = seatIndex === 0;
+        seatCreates.push({
+          orderId: order.id,
+          productId: item.productId,
+          seatIndex,
+          status: isPrimary ? "PRIMARY" : "PENDING_ASSIGNMENT",
+          profileId: isPrimary ? profile.id : null,
+        });
+        seatIndex += 1;
+      }
+    }
+
+    if (seatCreates.length) {
+      await prisma.orderSeat.createMany({ data: seatCreates });
+      const extra = Math.max(0, seatCreates.length - 1);
+      if (extra > 0) {
+        await prisma.orderEvent.create({
+          data: {
+            orderId: order.id,
+            type: "seats.created",
+            title: `${extra} tarjeta(s) extra pendientes de asignación`,
+            detail:
+              "El comprador configura 1 perfil en el wizard. Las demás se dan de alta con email + contraseña sin completar el onboarding completo.",
+          },
+        });
+      }
+    }
+  }
 
   return { ok: true, order: updatedOrder, alreadyProcessed: false };
 }
