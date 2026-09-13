@@ -69,8 +69,13 @@ export async function createMercadoPagoPreference(
   const config = await getMercadoPagoConfig();
   const base = appUrl();
 
-  // If no credentials configured yet, return a mock/development preference pointing to success
+  // If no credentials configured yet, only allow simulate outside production
   if (!config.isConfigured) {
+    if (process.env.NODE_ENV === "production" && process.env.ALLOW_MP_SIMULATE !== "true") {
+      throw new Error(
+        "Mercado Pago no está configurado. Cargá el Access Token en Superadmin → Configuración.",
+      );
+    }
     return {
       id: `dev-pref-${input.orderId}`,
       init_point: `${base}/checkout/simulate-mp?orderId=${input.orderId}`,

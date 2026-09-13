@@ -10,6 +10,7 @@ import { normalizeSlug } from "@/lib/utils";
 const AssignSeatSchema = z.object({
   orderId: z.string(),
   seatId: z.string(),
+  accessToken: z.string().optional().nullable(),
   email: z.string().email(),
   name: z.string().min(2).max(120),
 });
@@ -29,15 +30,13 @@ export async function assignOrderSeat(input: z.infer<typeof AssignSeatSchema>) {
   const parsed = AssignSeatSchema.safeParse(input);
   if (!parsed.success) return { ok: false as const, error: "Datos inválidos" };
 
-  const { orderId, seatId, email, name } = parsed.data;
+  const { orderId, seatId, email, name, accessToken } = parsed.data;
   const emailNorm = email.toLowerCase().trim();
 
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    select: { id: true, orderNumber: true, paymentStatus: true, email: true },
-  });
-  if (!order || order.paymentStatus !== "APPROVED") {
-    return { ok: false as const, error: "Pedido no encontrado o no pagado" };
+  const { assertOrderAccess } = await import("@/server/order-access");
+  const access = await assertOrderAccess(orderId, accessToken);
+  if (!access.ok || access.order.paymentStatus !== "APPROVED") {
+    return { ok: false as const, error: "No autorizado o pedido no pagado" };
   }
 
   const seat = await prisma.orderSeat.findUnique({ where: { id: seatId } });
@@ -97,8 +96,8 @@ export async function assignOrderSeat(input: z.infer<typeof AssignSeatSchema>) {
         fullName: name.trim(),
         email: emailNorm,
         source: "ECOMMERCE",
-        sourceOrderId: order.id,
-        sourceOrderNumber: order.orderNumber,
+        sourceOrderId: orderId,
+        sourceOrderNumber: access.order.orderNumber,
         profileStatus: "PENDING_CONFIGURATION",
         onboardingStatus: "NOT_STARTED",
         onboardingStep: 1,

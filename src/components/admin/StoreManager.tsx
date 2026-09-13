@@ -1021,9 +1021,9 @@ function StockManagementSection({
  * Sección de Configuración de Credenciales de Tienda
  */
 function StoreSettingsSection({ settings }: { settings: Record<string, string> }) {
-  const [token, setToken] = React.useState(settings.MERCADOPAGO_ACCESS_TOKEN || "");
+  const [token, setToken] = React.useState("");
   const [pubKey, setPubKey] = React.useState(settings.MERCADOPAGO_PUBLIC_KEY || "");
-  const [secret, setSecret] = React.useState(settings.MERCADOPAGO_WEBHOOK_SECRET || "");
+  const [secret, setSecret] = React.useState("");
   const [sandbox, setSandbox] = React.useState(settings.MERCADOPAGO_SANDBOX === "true");
   const [originAddress, setOriginAddress] = React.useState(settings.SHIPPING_ORIGIN_ADDRESS || "");
   const [originPostal, setOriginPostal] = React.useState(settings.SHIPPING_ORIGIN_POSTAL_CODE || "");
@@ -1033,9 +1033,9 @@ function StoreSettingsSection({ settings }: { settings: Record<string, string> }
     e.preventDefault();
     setLoading(true);
     const res = await updateStoreSettings({
-      mpAccessToken: token,
+      ...(token && !token.includes("•") ? { mpAccessToken: token } : {}),
       mpPublicKey: pubKey,
-      mpWebhookSecret: secret,
+      ...(secret && !secret.includes("•") ? { mpWebhookSecret: secret } : {}),
       mpSandbox: sandbox,
       shippingOriginAddress: originAddress,
       shippingOriginPostalCode: originPostal,
@@ -1064,7 +1064,11 @@ function StoreSettingsSection({ settings }: { settings: Record<string, string> }
               type="password"
               value={token}
               onChange={(e) => setToken(e.target.value)}
-              placeholder="APP_USR-..."
+              placeholder={
+                settings.MERCADOPAGO_ACCESS_TOKEN_SET === "true"
+                  ? "•••••••• (dejar o pegar nueva para reemplazar)"
+                  : "APP_USR-..."
+              }
               className="w-full bg-secondary border rounded-xl px-4 py-2.5 text-xs font-mono"
             />
             <p className="text-[11px] text-muted-foreground">

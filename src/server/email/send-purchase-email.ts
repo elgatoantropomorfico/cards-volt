@@ -20,6 +20,9 @@ export async function sendPurchaseReceiptEmail(orderId: string) {
     return { ok: true as const, skipped: true as const };
   }
 
+  const { ensureOrderAccessToken } = await import("@/server/order-access");
+  const accessToken = await ensureOrderAccessToken(order.id);
+
   const data: PurchaseReceiptData = {
     customerName: order.customerName,
     customerEmail: order.email,
@@ -34,7 +37,7 @@ export async function sendPurchaseReceiptEmail(orderId: string) {
       unitPrice: Number(it.unitPrice),
       subtotal: Number(it.subtotal),
     })),
-    onboardingUrl: `${appBaseUrl()}/onboarding/${order.id}`,
+    onboardingUrl: `${appBaseUrl()}/onboarding/${order.id}?t=${encodeURIComponent(accessToken)}`,
     paidAtLabel: (order.paidAt || new Date()).toLocaleString("es-AR", {
       dateStyle: "medium",
       timeStyle: "short",

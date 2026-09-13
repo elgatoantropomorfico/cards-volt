@@ -253,7 +253,14 @@ export async function handleApprovedOrder({
     }
   }
 
-  // 7. Purchase receipt email (idempotent via purchaseEmailSentAt)
+  // 7. Ensure buyer access token + purchase receipt email
+  try {
+    const { ensureOrderAccessToken } = await import("@/server/order-access");
+    await ensureOrderAccessToken(order.id);
+  } catch (err) {
+    console.error("[fulfillment] access token failed", err);
+  }
+
   try {
     const { sendPurchaseReceiptEmail } = await import("@/server/email/send-purchase-email");
     await sendPurchaseReceiptEmail(order.id);

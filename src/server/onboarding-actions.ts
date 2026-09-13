@@ -1,11 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { normalizeSlug, isValidSlug } from "@/lib/utils";
 import { TEMPLATE_VALUES, type LinkKind } from "@/lib/profile-types";
 import { normalizeLinkUrl } from "@/lib/socials";
+import { optionalHttpUrl } from "@/lib/validation";
+import { assertOrderAccess } from "@/server/order-access";
+import { auth } from "@/lib/auth";
 
 const KIND_VALUES = [
   "WEBSITE", "INSTAGRAM", "LINKEDIN", "TWITTER", "FACEBOOK", "YOUTUBE", "TIKTOK", "GITHUB", "SPOTIFY", "CALENDAR", "EMAIL", "PHONE", "WHATSAPP", "MAP", "PDF", "OTHER",
@@ -14,35 +18,46 @@ const KIND_VALUES = [
 const OnboardingAutosaveSchema = z.object({
   orderId: z.string(),
   profileId: z.string(),
+  accessToken: z.string().optional().nullable(),
   currentStep: z.number().int().min(1).max(8),
-  // Step 1: Password (handled separately)
-  // Step 2: Identity
-  fullName: z.string().optional().nullable(),
-  jobTitle: z.string().optional().nullable(),
-  companyName: z.string().optional().nullable(),
-  description: z.string().optional().nullable(),
-  avatarUrl: z.string().optional().nullable(),
-  // Step 3: Slug
-  slug: z.string().optional().nullable(),
-  // Step 4: Contact
-  email: z.string().optional().nullable(),
-  phone: z.string().optional().nullable(),
-  whatsapp: z.string().optional().nullable(),
-  website: z.string().optional().nullable(),
-  location: z.string().optional().nullable(),
-  // Step 5: Socials
-  instagram: z.string().optional().nullable(),
-  linkedin: z.string().optional().nullable(),
-  twitter: z.string().optional().nullable(),
-  tiktok: z.string().optional().nullable(),
-  youtube: z.string().optional().nullable(),
-  github: z.string().optional().nullable(),
-  // Step 6: Design
+  fullName: z.string().max(120).optional().nullable(),
+  jobTitle: z.string().max(120).optional().nullable(),
+  companyName: z.string().max(120).optional().nullable(),
+  description: z.string().max(2000).optional().nullable(),
+  avatarUrl: optionalHttpUrl,
+  slug: z.string().max(40).optional().nullable(),
+  email: z.string().max(200).optional().nullable(),
+  phone: z.string().max(40).optional().nullable(),
+  whatsapp: z.string().max(40).optional().nullable(),
+  website: z.string().max(300).optional().nullable(),
+  location: z.string().max(120).optional().nullable(),
+  instagram: z.string().max(120).optional().nullable(),
+  linkedin: z.string().max(200).optional().nullable(),
+  twitter: z.string().max(120).optional().nullable(),
+  tiktok: z.string().max(120).optional().nullable(),
+  youtube: z.string().max(200).optional().nullable(),
+  github: z.string().max(120).optional().nullable(),
   template: z.enum(TEMPLATE_VALUES).optional(),
-  primaryColor: z.string().optional(),
+  primaryColor: z.string().max(20).optional(),
   themeMode: z.enum(["LIGHT", "DARK"]).optional(),
-  coverUrl: z.string().optional().nullable(),
+  coverUrl: optionalHttpUrl,
 });
+
+async function guardOrderProfile(
+  orderId: string,
+  profileId: string,
+  accessToken?: string | null,
+) {
+  const access = await assertOrderAccess(orderId, accessToken);
+  if (!access.ok) return { ok: false as const, error: access.error };
+  if (access.order.paymentStatus !== "APPROVED") {
+    return { ok: false as const, error: "Pedido no aprobado" };
+  }
+  if (access.order.profileId !== profileId) {
+    return { ok: false as const, error: "No autorizado para este perfil" };
+  }
+  return { ok: true as const, access };
+}
 
 export async function autosaveOnboarding(input: z.infer<typeof OnboardingAutosaveSchema>) {
   const parsed = OnboardingAutosaveSchema.safeParse(input);
@@ -50,17 +65,9 @@ export async function autosaveOnboarding(input: z.infer<typeof OnboardingAutosav
     return { ok: false, error: "Datos inválidos" };
   }
 
-  const { orderId, profileId, currentStep, ...data } = parsed.data;
-
-  // Verify association between order and profile
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    select: { id: true, profileId: true },
-  });
-
-  if (!order || order.profileId !== profileId) {
-    return { ok: false, error: "No autorizado para este perfil" };
-  }
+  const { orderId, profileId, accessToken, currentStep, ...data } = parsed.data;
+  const gate = await guardOrderProfile(orderId, profileId, accessToken);
+  if (!gate.ok) return gate;
 
   const updateData: any = {
     onboardingStatus: "IN_PROGRESS",
@@ -77,7 +84,6 @@ export async function autosaveOnboarding(input: z.infer<typeof OnboardingAutosav
   if (data.slug !== undefined && data.slug) {
     const s = normalizeSlug(data.slug);
     if (isValidSlug(s)) {
-      // Check collision
       const exists = await prisma.profile.findUnique({
         where: { slug: s },
         select: { id: true },
@@ -120,18 +126,13 @@ export async function autosaveOnboarding(input: z.infer<typeof OnboardingAutosav
 export async function addOnboardingLink(input: {
   orderId: string;
   profileId: string;
+  accessToken?: string | null;
   kind: LinkKind;
   label: string;
   url: string;
 }) {
-  const order = await prisma.order.findUnique({
-    where: { id: input.orderId },
-    select: { profileId: true },
-  });
-
-  if (!order || order.profileId !== input.profileId) {
-    return { ok: false, error: "No autorizado" };
-  }
+  const gate = await guardOrderProfile(input.orderId, input.profileId, input.accessToken);
+  if (!gate.ok) return gate;
 
   const url = normalizeLinkUrl(input.kind, input.url);
   const count = await prisma.link.count({ where: { profileId: input.profileId } });
@@ -140,8 +141,8 @@ export async function addOnboardingLink(input: {
     data: {
       profileId: input.profileId,
       kind: input.kind,
-      label: input.label.trim(),
-      url,
+      label: input.label.trim().slice(0, 80),
+      url: url.slice(0, 500),
       order: count,
     },
   });
@@ -152,16 +153,11 @@ export async function addOnboardingLink(input: {
 export async function deleteOnboardingLink(input: {
   orderId: string;
   profileId: string;
+  accessToken?: string | null;
   linkId: string;
 }) {
-  const order = await prisma.order.findUnique({
-    where: { id: input.orderId },
-    select: { profileId: true },
-  });
-
-  if (!order || order.profileId !== input.profileId) {
-    return { ok: false, error: "No autorizado" };
-  }
+  const gate = await guardOrderProfile(input.orderId, input.profileId, input.accessToken);
+  if (!gate.ok) return gate;
 
   await prisma.link.deleteMany({
     where: { id: input.linkId, profileId: input.profileId },
@@ -171,12 +167,16 @@ export async function deleteOnboardingLink(input: {
 }
 
 /**
- * Paso final de confirmación del onboarding:
- * profileStatus -> READY
- * fulfillmentStatus -> READY_FOR_PRODUCTION
- * Registra evento en timeline
+ * Paso final de confirmación del onboarding
  */
-export async function finalizeOnboarding(input: { orderId: string; profileId: string }) {
+export async function finalizeOnboarding(input: {
+  orderId: string;
+  profileId: string;
+  accessToken?: string | null;
+}) {
+  const gate = await guardOrderProfile(input.orderId, input.profileId, input.accessToken);
+  if (!gate.ok) return gate;
+
   const order = await prisma.order.findUnique({
     where: { id: input.orderId },
     include: { profile: true },
@@ -237,12 +237,19 @@ export async function finalizeOnboarding(input: { orderId: string; profileId: st
 export async function setOnboardingPassword(input: {
   orderId: string;
   profileId: string;
+  accessToken?: string | null;
   password: string;
 }) {
   const password = input.password.trim();
   if (password.length < 8) {
     return { ok: false as const, error: "La contraseña debe tener al menos 8 caracteres" };
   }
+  if (password.length > 128) {
+    return { ok: false as const, error: "Contraseña demasiado larga" };
+  }
+
+  const gate = await guardOrderProfile(input.orderId, input.profileId, input.accessToken);
+  if (!gate.ok) return gate;
 
   const order = await prisma.order.findUnique({
     where: { id: input.orderId },
@@ -282,10 +289,20 @@ export async function setOnboardingPassword(input: {
     where: { id: input.profileId },
     data: {
       onboardingStatus: "IN_PROGRESS",
-      onboardingStep: Math.max(2, 2),
+      onboardingStep: 2,
       profileStatus: "CONFIGURING",
     },
   });
+
+  // Sign the buyer in so subsequent uploads/dashboard work with session auth
+  try {
+    await auth.api.signInEmail({
+      body: { email: order.email, password },
+      headers: await headers(),
+    });
+  } catch (err) {
+    console.warn("[onboarding] auto sign-in after password failed", err);
+  }
 
   return { ok: true as const };
 }

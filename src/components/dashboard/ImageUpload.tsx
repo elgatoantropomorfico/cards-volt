@@ -55,6 +55,7 @@ export function ImageUpload({
   label = "Subir imagen",
   shape = "circle",
   hint,
+  extraFields,
 }: {
   value: string | null | undefined;
   onChange: (url: string | null) => void;
@@ -62,6 +63,7 @@ export function ImageUpload({
   label?: string;
   shape?: Shape;
   hint?: string;
+  extraFields?: Record<string, string>;
 }) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [loading, setLoading] = React.useState(false);
@@ -74,6 +76,11 @@ export function ImageUpload({
       const fd = new FormData();
       fd.set("file", uploadFile);
       fd.set("folder", folder);
+      if (extraFields) {
+        for (const [k, v] of Object.entries(extraFields)) {
+          if (v) fd.set(k, v);
+        }
+      }
       const r = await fetch("/api/upload", { method: "POST", body: fd });
       const text = await r.text();
       let data: { ok?: boolean; url?: string; error?: string } | null = null;

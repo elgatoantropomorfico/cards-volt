@@ -2,9 +2,10 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { generateOrderNumber, generatePublicId } from "@/lib/id";
+import { generateOrderNumber } from "@/lib/id";
 import { createMercadoPagoPreference } from "./mercadopago";
 import { ensureStoreCatalog } from "./store-catalog";
+import { generateOrderAccessToken } from "./order-access";
 
 const CheckoutSchema = z.object({
   customerName: z.string().min(2, "Nombre requerido"),
@@ -29,7 +30,7 @@ const CheckoutSchema = z.object({
 export type CreateOrderInput = z.infer<typeof CheckoutSchema>;
 
 export type CreateOrderResult =
-  | { ok: true; orderId: string; orderNumber: string; checkoutUrl: string }
+  | { ok: true; orderId: string; orderNumber: string; accessToken: string; checkoutUrl: string }
   | { ok: false; error: string };
 
 export async function createCheckoutOrder(rawInput: CreateOrderInput): Promise<CreateOrderResult> {
@@ -106,11 +107,13 @@ export async function createCheckoutOrder(rawInput: CreateOrderInput): Promise<C
   }
 
   const fullName = `${input.customerName.trim()} ${input.customerLastName.trim()}`;
+  const accessToken = generateOrderAccessToken();
 
   // 4. Create Order in preliminary PENDING state
   const order = await prisma.order.create({
     data: {
       orderNumber,
+      accessToken,
       customerName: fullName,
       email: input.email.toLowerCase().trim(),
       phone: input.phone.trim(),
@@ -171,6 +174,7 @@ export async function createCheckoutOrder(rawInput: CreateOrderInput): Promise<C
       ok: true,
       orderId: order.id,
       orderNumber: order.orderNumber,
+      accessToken,
       checkoutUrl: preference.init_point,
     };
   } catch (err: any) {

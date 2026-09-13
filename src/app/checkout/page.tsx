@@ -75,6 +75,15 @@ export default function CheckoutPage() {
       if (!res.ok) throw new Error(res.error || "No se pudo generar la orden de pago.");
       if (!res.checkoutUrl) throw new Error("No se pudo obtener la URL de pago.");
 
+      try {
+        sessionStorage.setItem(
+          `volt_order_access:${res.orderId}`,
+          res.accessToken,
+        );
+      } catch {
+        /* ignore */
+      }
+
       clearCart();
       window.location.href = res.checkoutUrl;
     } catch (err: any) {

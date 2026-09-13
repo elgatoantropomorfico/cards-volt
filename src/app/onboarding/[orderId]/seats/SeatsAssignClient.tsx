@@ -18,10 +18,12 @@ type SeatRow = {
 export function SeatsAssignClient({
   orderId,
   orderNumber,
+  accessToken,
   seats: initialSeats,
 }: {
   orderId: string;
   orderNumber: string;
+  accessToken: string;
   seats: SeatRow[];
 }) {
   const [seats, setSeats] = useState(initialSeats);
@@ -48,6 +50,7 @@ export function SeatsAssignClient({
     const res = await assignOrderSeat({
       orderId,
       seatId,
+      accessToken,
       name: f.name.trim(),
       email: f.email.trim(),
     });

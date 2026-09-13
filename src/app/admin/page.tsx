@@ -59,9 +59,11 @@ export default async function AdminPage() {
     ]);
 
   const settingsMap: Record<string, string> = {
-    MERCADOPAGO_ACCESS_TOKEN: storeSettings?.mpAccessToken || "",
+    MERCADOPAGO_ACCESS_TOKEN: storeSettings?.mpAccessToken ? "••••••••" : "",
     MERCADOPAGO_PUBLIC_KEY: storeSettings?.mpPublicKey || "",
-    MERCADOPAGO_WEBHOOK_SECRET: storeSettings?.mpWebhookSecret || "",
+    MERCADOPAGO_WEBHOOK_SECRET: storeSettings?.mpWebhookSecret ? "••••••••" : "",
+    MERCADOPAGO_ACCESS_TOKEN_SET: storeSettings?.mpAccessToken ? "true" : "false",
+    MERCADOPAGO_WEBHOOK_SECRET_SET: storeSettings?.mpWebhookSecret ? "true" : "false",
     MERCADOPAGO_SANDBOX: storeSettings?.mpSandbox ? "true" : "false",
     SHIPPING_ORIGIN_ADDRESS: storeSettings?.shippingOriginAddress || "",
     SHIPPING_ORIGIN_POSTAL_CODE: storeSettings?.shippingOriginPostalCode || "",

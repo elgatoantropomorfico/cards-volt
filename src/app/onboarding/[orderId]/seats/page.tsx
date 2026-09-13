@@ -1,15 +1,31 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { SeatsAssignClient } from "./SeatsAssignClient";
+import {
+  assertOrderAccess,
+  setOrderAccessCookie,
+} from "@/server/order-access";
 
 export const dynamic = "force-dynamic";
 
 export default async function SeatsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ orderId: string }>;
+  searchParams: Promise<{ t?: string }>;
 }) {
   const { orderId } = await params;
+  const { t } = await searchParams;
+
+  const access = await assertOrderAccess(orderId, t || null);
+  if (!access.ok || access.order.paymentStatus !== "APPROVED") {
+    notFound();
+  }
+
+  if (access.via === "token" || t) {
+    await setOrderAccessCookie(orderId, access.order.accessToken);
+  }
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -25,15 +41,15 @@ export default async function SeatsPage({
     },
   });
 
-  if (!order || order.paymentStatus !== "APPROVED") {
+  if (!order) {
     notFound();
   }
 
-  // If only one seat, nothing to assign — send them to dashboard conceptually via empty pending
   return (
     <SeatsAssignClient
       orderId={order.id}
       orderNumber={order.orderNumber}
+      accessToken={access.order.accessToken}
       seats={order.seats.map((s) => ({
         id: s.id,
         seatIndex: s.seatIndex,

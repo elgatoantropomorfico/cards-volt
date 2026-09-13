@@ -2,15 +2,35 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { profileToView } from "@/server/profile-shape";
 import { OnboardingWizard } from "./OnboardingWizard";
+import {
+  assertOrderAccess,
+  setOrderAccessCookie,
+} from "@/server/order-access";
 
 export const dynamic = "force-dynamic";
 
 export default async function OnboardingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ orderId: string }>;
+  searchParams: Promise<{ t?: string }>;
 }) {
   const { orderId } = await params;
+  const { t } = await searchParams;
+
+  const access = await assertOrderAccess(orderId, t || null);
+  if (!access.ok) {
+    notFound();
+  }
+
+  if (access.via === "token" || t) {
+    await setOrderAccessCookie(orderId, access.order.accessToken);
+  }
+
+  if (access.order.paymentStatus !== "APPROVED") {
+    notFound();
+  }
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -20,7 +40,6 @@ export default async function OnboardingPage({
           links: { orderBy: { order: "asc" } },
         },
       },
-      items: true,
     },
   });
 
@@ -57,6 +76,7 @@ export default async function OnboardingPage({
         profileStatus: order.profile.profileStatus,
         fulfillmentStatus: order.fulfillmentStatus,
         email: order.email,
+        accessToken: access.order.accessToken,
       }}
       initialProfile={profileView}
       initialLinks={links}

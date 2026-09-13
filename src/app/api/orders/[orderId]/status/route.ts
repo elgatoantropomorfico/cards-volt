@@ -1,18 +1,28 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { assertOrderAccess, ensureOrderAccessToken } from "@/server/order-access";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET(
-  _req: Request,
+  req: Request,
   context: { params: Promise<{ orderId: string }> },
 ) {
-  const { orderId } = await context.params;
+  const ip = clientIp(req);
+  const rl = rateLimit(`order-status:${ip}`, 60, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
 
+  const { orderId } = await context.params;
   if (!orderId) {
     return NextResponse.json({ error: "orderId required" }, { status: 400 });
   }
+
+  const url = new URL(req.url);
+  const token = url.searchParams.get("t");
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -21,6 +31,7 @@ export async function GET(
       orderNumber: true,
       paymentStatus: true,
       profileId: true,
+      accessToken: true,
       profile: {
         select: {
           id: true,
@@ -37,6 +48,20 @@ export async function GET(
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
+  const access = await assertOrderAccess(orderId, token);
+  if (!access.ok) {
+    // Minimal public poll for checkout success (no PII / no wizard token)
+    return NextResponse.json(
+      {
+        id: order.id,
+        paymentStatus: order.paymentStatus,
+      },
+      { headers: { "Cache-Control": "no-store, max-age=0" } },
+    );
+  }
+
+  const accessToken = order.accessToken || (await ensureOrderAccessToken(orderId));
+
   return NextResponse.json(
     {
       id: order.id,
@@ -44,10 +69,9 @@ export async function GET(
       paymentStatus: order.paymentStatus,
       profileId: order.profileId,
       profile: order.profile,
-      onboardingUrl: `/onboarding/${order.id}`,
+      accessToken,
+      onboardingUrl: `/onboarding/${order.id}?t=${encodeURIComponent(accessToken)}`,
     },
-    {
-      headers: { "Cache-Control": "no-store, max-age=0" },
-    },
+    { headers: { "Cache-Control": "no-store, max-age=0" } },
   );
 }

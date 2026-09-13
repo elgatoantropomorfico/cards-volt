@@ -5,6 +5,8 @@ import {
 } from "@/server/mercadopago";
 import { handleApprovedOrder } from "@/server/order-fulfillment";
 import { prisma } from "@/lib/prisma";
+import { ensureOrderAccessToken } from "@/server/order-access";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -17,15 +19,20 @@ function cleanId(value: unknown): string | undefined {
 }
 
 /**
- * Called by the Success page when Mercado Pago redirects the browser back
- * (often before or in parallel with the webhook).
- * Verifies payment with MP API and advances the order if approved.
+ * Called by the Success page when Mercado Pago redirects the browser back.
+ * Only advances the order if Mercado Pago API confirms approval.
  */
 export async function POST(
   req: Request,
   context: { params: Promise<{ orderId: string }> },
 ) {
   try {
+    const ip = clientIp(req);
+    const rl = rateLimit(`order-confirm:${ip}`, 40, 60_000);
+    if (!rl.ok) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const { orderId: pathOrderId } = await context.params;
     const body = await req.json().catch(() => ({}));
     const orderId = cleanId(body.orderId) || cleanId(pathOrderId);
@@ -42,6 +49,7 @@ export async function POST(
         orderNumber: true,
         paymentStatus: true,
         profileId: true,
+        accessToken: true,
         profile: {
           select: { id: true, slug: true, publicId: true, profileStatus: true },
         },
@@ -55,15 +63,18 @@ export async function POST(
     if (order.paymentStatus !== "APPROVED") {
       let paymentData = paymentId ? await getMercadoPagoPayment(paymentId) : null;
 
-      // Fallback: search MP by external_reference = orderId
       if (!paymentData || paymentData.status !== "approved") {
         paymentData = await findMercadoPagoPaymentByOrderId(orderId);
       }
 
       if (paymentData?.status === "approved") {
         const ref = cleanId(paymentData.external_reference) || orderId;
+        // Only fulfill if MP external_reference matches this order
+        if (String(ref) !== orderId) {
+          return NextResponse.json({ error: "Payment reference mismatch" }, { status: 400 });
+        }
         await handleApprovedOrder({
-          orderId: String(ref),
+          orderId,
           paymentId: String(paymentData.id),
           paymentMethod: paymentData.payment_method_id,
           rawPayload: paymentData,
@@ -84,13 +95,22 @@ export async function POST(
       },
     });
 
+    // Issue access token only after payment is approved (needed for wizard redirect)
+    let accessToken: string | undefined;
+    if (refreshed?.paymentStatus === "APPROVED") {
+      accessToken = await ensureOrderAccessToken(orderId);
+    }
+
     return NextResponse.json({
       id: refreshed?.id,
       orderNumber: refreshed?.orderNumber,
       paymentStatus: refreshed?.paymentStatus,
       profileId: refreshed?.profileId,
       profile: refreshed?.profile,
-      onboardingUrl: `/onboarding/${orderId}`,
+      accessToken,
+      onboardingUrl: accessToken
+        ? `/onboarding/${orderId}?t=${encodeURIComponent(accessToken)}`
+        : undefined,
       confirmedNow: refreshed?.paymentStatus === "APPROVED",
     });
   } catch (error: any) {

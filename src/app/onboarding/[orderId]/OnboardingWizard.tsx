@@ -26,6 +26,7 @@ import {
   KeyRound,
 } from "lucide-react";
 import { PhonePreview } from "@/components/dashboard/PhonePreview";
+import { ImageUpload } from "@/components/dashboard/ImageUpload";
 import { TEMPLATE_CATALOG } from "@/lib/templates-meta";
 import { normalizeSlug, isValidSlug } from "@/lib/utils";
 import {
@@ -75,6 +76,7 @@ export function OnboardingWizard({
     profileStatus: string;
     fulfillmentStatus: string;
     email: string;
+    accessToken: string;
   };
   initialProfile: ProfileView;
   initialLinks: ProfileLink[];
@@ -82,6 +84,10 @@ export function OnboardingWizard({
   needsPassword: boolean;
 }) {
   const router = useRouter();
+  const uploadExtra = {
+    orderId: order.id,
+    accessToken: order.accessToken,
+  };
   const minStep = needsPassword ? 1 : 2;
   const initialStep = needsPassword
     ? 1
@@ -115,12 +121,13 @@ export function OnboardingWizard({
       await autosaveOnboarding({
         orderId: order.id,
         profileId: updatedProfile.id,
+        accessToken: order.accessToken,
         currentStep: currentStepNum,
         fullName: updatedProfile.fullName,
         jobTitle: updatedProfile.jobTitle,
         companyName: updatedProfile.companyName,
         description: updatedProfile.description,
-        avatarUrl: updatedProfile.avatarUrl,
+        avatarUrl: updatedProfile.avatarUrl ?? null,
         slug: updatedProfile.slug,
         email: updatedProfile.email,
         phone: updatedProfile.phone,
@@ -136,7 +143,7 @@ export function OnboardingWizard({
         template: updatedProfile.template,
         primaryColor: updatedProfile.primaryColor,
         themeMode: updatedProfile.themeMode,
-        coverUrl: updatedProfile.coverUrl,
+        coverUrl: updatedProfile.coverUrl ?? null,
       });
       setSaving(false);
       setSavedSuccess(true);
@@ -172,6 +179,7 @@ export function OnboardingWizard({
       const res = await setOnboardingPassword({
         orderId: order.id,
         profileId: profile.id,
+        accessToken: order.accessToken,
         password,
       });
       setSavingPassword(false);
@@ -206,6 +214,7 @@ export function OnboardingWizard({
     const res = await addOnboardingLink({
       orderId: order.id,
       profileId: profile.id,
+      accessToken: order.accessToken,
       kind: newKind,
       label: newLabel,
       url: newUrl,
@@ -231,6 +240,7 @@ export function OnboardingWizard({
     await deleteOnboardingLink({
       orderId: order.id,
       profileId: profile.id,
+      accessToken: order.accessToken,
       linkId,
     });
     setLinks((prev) => prev.filter((l) => l.id !== linkId));
@@ -241,11 +251,14 @@ export function OnboardingWizard({
     const res = await finalizeOnboarding({
       orderId: order.id,
       profileId: profile.id,
+      accessToken: order.accessToken,
     });
     setFinishing(false);
     if (res.ok) {
       if (res.pendingSeats && res.pendingSeats > 0) {
-        router.push(`/onboarding/${order.id}/seats`);
+        router.push(
+          `/onboarding/${order.id}/seats?t=${encodeURIComponent(order.accessToken)}`,
+        );
         return;
       }
       setFinished(true);
@@ -540,17 +553,34 @@ export function OnboardingWizard({
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                          URL de Avatar / Foto (opcional)
-                        </label>
-                        <input
-                          type="url"
-                          value={profile.avatarUrl || ""}
-                          onChange={(e) => updateProfileState({ avatarUrl: e.target.value })}
-                          placeholder="https://..."
-                          className="w-full rounded-xl border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground shadow-soft focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500"
-                        />
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-medium text-muted-foreground mb-2">
+                            Foto de perfil
+                          </label>
+                          <ImageUpload
+                            value={profile.avatarUrl}
+                            onChange={(v) => updateProfileState({ avatarUrl: v })}
+                            folder="avatars"
+                            shape="circle"
+                            label="Subir foto"
+                            hint="JPG, PNG o WebP. Máx 8MB."
+                            extraFields={uploadExtra}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-muted-foreground mb-2">
+                            Portada
+                          </label>
+                          <ImageUpload
+                            value={profile.coverUrl}
+                            onChange={(v) => updateProfileState({ coverUrl: v })}
+                            folder="covers"
+                            shape="cover"
+                            label="Subir portada"
+                            extraFields={uploadExtra}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>

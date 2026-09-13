@@ -432,6 +432,8 @@ model Order {
   paidAt              DateTime?
   fulfilledAt         DateTime?
   purchaseEmailSentAt DateTime?
+  /// Secret token for buyer onboarding links (email / success). Not the MP token.
+  accessToken         String?           @unique
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
