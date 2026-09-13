@@ -136,3 +136,26 @@ export async function getMercadoPagoPayment(paymentId: string) {
   if (!res.ok) return null;
   return res.json();
 }
+
+/**
+ * Find latest payment for an order via external_reference (order id).
+ * Useful when the browser returns without a usable payment_id.
+ */
+export async function findMercadoPagoPaymentByOrderId(orderId: string) {
+  const config = await getMercadoPagoConfig();
+  if (!config.isConfigured) return null;
+
+  const url = new URL("https://api.mercadopago.com/v1/payments/search");
+  url.searchParams.set("external_reference", orderId);
+  url.searchParams.set("sort", "date_created");
+  url.searchParams.set("criteria", "desc");
+
+  const res = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${config.accessToken}` },
+  });
+
+  if (!res.ok) return null;
+  const data = await res.json();
+  const results = Array.isArray(data?.results) ? data.results : [];
+  return results[0] || null;
+}

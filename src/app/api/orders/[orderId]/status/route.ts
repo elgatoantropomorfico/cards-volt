@@ -2,10 +2,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const orderId = url.searchParams.get("orderId");
+export async function GET(
+  _req: Request,
+  context: { params: Promise<{ orderId: string }> },
+) {
+  const { orderId } = await context.params;
 
   if (!orderId) {
     return NextResponse.json({ error: "orderId required" }, { status: 400 });
@@ -24,6 +27,7 @@ export async function GET(req: Request) {
           slug: true,
           publicId: true,
           profileStatus: true,
+          onboardingStatus: true,
         },
       },
     },
@@ -33,11 +37,17 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
-  return NextResponse.json({
-    id: order.id,
-    orderNumber: order.orderNumber,
-    paymentStatus: order.paymentStatus,
-    profileId: order.profileId,
-    profile: order.profile,
-  });
+  return NextResponse.json(
+    {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      paymentStatus: order.paymentStatus,
+      profileId: order.profileId,
+      profile: order.profile,
+      onboardingUrl: `/onboarding/${order.id}`,
+    },
+    {
+      headers: { "Cache-Control": "no-store, max-age=0" },
+    },
+  );
 }

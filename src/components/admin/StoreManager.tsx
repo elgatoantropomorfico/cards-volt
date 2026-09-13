@@ -578,8 +578,52 @@ function OrderDetailView({
                 </div>
                 <div>
                   <span className="text-muted-foreground block">DNI / CUIL:</span>
-                  <span>{order.dni || "No especificado"}</span>
+                  <span>{order.dni || order.identificationNumber || "No especificado"}</span>
                 </div>
+              </div>
+
+              {/* Link directo al wizard / configuración del perfil */}
+              <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 space-y-2">
+                <p className="text-xs font-semibold text-violet-900">
+                  Link de configuración del cliente
+                </p>
+                <p className="text-[11px] text-violet-800/80">
+                  Si el cliente se quedó en la pantalla de carga o salió de la página, enviále este link para continuar el wizard.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <a
+                    href={`/onboarding/${order.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#7000FF] px-3 py-2 text-xs font-semibold text-white hover:bg-[#8A2BE2] transition-colors"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Abrir wizard de configuración
+                  </a>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="text-xs gap-1.5"
+                    onClick={async () => {
+                      const url = `${typeof window !== "undefined" ? window.location.origin : `https://${appHost}`}/onboarding/${order.id}`;
+                      await navigator.clipboard.writeText(url);
+                      toast({ title: "Link copiado", description: url, variant: "success" });
+                    }}
+                  >
+                    Copiar link
+                  </Button>
+                </div>
+                {order.profile?.slug && (
+                  <a
+                    href={`/${order.profile.slug}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-mono text-violet-700 hover:underline"
+                  >
+                    Ver perfil público /{order.profile.slug} <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
               </div>
 
               {order.shippingAddress && (
