@@ -39,6 +39,14 @@ export function AdminShell({
     products: any[];
     stockMovements: any[];
     settings: Record<string, string>;
+    mailboxes: {
+      id: string;
+      email: string;
+      label: string;
+      role: string;
+      active: boolean;
+      notes: string | null;
+    }[];
     appHost: string;
   };
 }) {
@@ -147,6 +155,7 @@ export function AdminShell({
                 products={storeData.products}
                 stockMovements={storeData.stockMovements}
                 settings={storeData.settings}
+                mailboxes={storeData.mailboxes}
                 appHost={storeData.appHost}
               />
             )}

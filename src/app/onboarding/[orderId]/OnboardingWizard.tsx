@@ -22,6 +22,8 @@ import {
   Plus,
   Trash2,
   ExternalLink,
+  Lock,
+  KeyRound,
 } from "lucide-react";
 import { PhonePreview } from "@/components/dashboard/PhonePreview";
 import { TEMPLATE_CATALOG } from "@/lib/templates-meta";
@@ -31,17 +33,19 @@ import {
   addOnboardingLink,
   deleteOnboardingLink,
   finalizeOnboarding,
+  setOnboardingPassword,
 } from "@/server/onboarding-actions";
 import type { ProfileView, ProfileLink, LinkKind } from "@/lib/profile-types";
 
 const STEPS = [
-  { num: 1, title: "Identidad", desc: "Foto, nombre y cargo" },
-  { num: 2, title: "Tu URL", desc: "Enlace personalizado" },
-  { num: 3, title: "Contacto", desc: "WhatsApp, email y tel" },
-  { num: 4, title: "Redes y Links", desc: "Instagram, LinkedIn, web" },
-  { num: 5, title: "Diseño", desc: "Plantilla y colores" },
-  { num: 6, title: "Vista Previa", desc: "Revisá tu perfil final" },
-  { num: 7, title: "Confirmación", desc: "Enviar a producción" },
+  { num: 1, title: "Contraseña", desc: "Acceso a tu cuenta" },
+  { num: 2, title: "Identidad", desc: "Foto, nombre y cargo" },
+  { num: 3, title: "Tu URL", desc: "Enlace personalizado" },
+  { num: 4, title: "Contacto", desc: "WhatsApp, email y tel" },
+  { num: 5, title: "Redes y Links", desc: "Instagram, LinkedIn, web" },
+  { num: 6, title: "Diseño", desc: "Plantilla y colores" },
+  { num: 7, title: "Vista Previa", desc: "Revisá tu perfil final" },
+  { num: 8, title: "Confirmación", desc: "Enviar a producción" },
 ];
 
 const PRESETS = [
@@ -56,30 +60,44 @@ const PRESETS = [
   "#C9A227",
 ];
 
+const TOTAL_STEPS = STEPS.length;
+
 export function OnboardingWizard({
   order,
   initialProfile,
   initialLinks,
   appHost,
+  needsPassword,
 }: {
   order: {
     id: string;
     orderNumber: string;
     profileStatus: string;
     fulfillmentStatus: string;
+    email: string;
   };
   initialProfile: ProfileView;
   initialLinks: ProfileLink[];
   appHost: string;
+  needsPassword: boolean;
 }) {
   const router = useRouter();
-  const [step, setStep] = useState(initialProfile.onboardingStep || 1);
+  const minStep = needsPassword ? 1 : 2;
+  const initialStep = needsPassword
+    ? 1
+    : Math.max(2, Math.min(TOTAL_STEPS, initialProfile.onboardingStep || 2));
+  const [step, setStep] = useState(initialStep);
   const [profile, setProfile] = useState<ProfileView>(initialProfile);
   const [links, setLinks] = useState<ProfileLink[]>(initialLinks);
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [finished, setFinished] = useState(initialProfile.profileStatus === "READY");
+  const [passwordReady, setPasswordReady] = useState(!needsPassword);
+  const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [savingPassword, setSavingPassword] = useState(false);
 
   // Links temp inputs
   const [newKind, setNewKind] = useState<LinkKind>("INSTAGRAM");
@@ -134,8 +152,40 @@ export function OnboardingWizard({
     });
   };
 
-  const handleNextStep = () => {
-    if (step < 7) {
+  const handleNextStep = async () => {
+    if (step === 1) {
+      if (passwordReady) {
+        setStep(2);
+        triggerAutosave(profile, 2);
+        return;
+      }
+      setPasswordError(null);
+      if (password.length < 8) {
+        setPasswordError("Mínimo 8 caracteres");
+        return;
+      }
+      if (password !== password2) {
+        setPasswordError("Las contraseñas no coinciden");
+        return;
+      }
+      setSavingPassword(true);
+      const res = await setOnboardingPassword({
+        orderId: order.id,
+        profileId: profile.id,
+        password,
+      });
+      setSavingPassword(false);
+      if (!res.ok) {
+        setPasswordError(res.error || "No se pudo guardar la contraseña");
+        return;
+      }
+      setPasswordReady(true);
+      setStep(2);
+      triggerAutosave(profile, 2);
+      return;
+    }
+
+    if (step < TOTAL_STEPS) {
       const nextStep = step + 1;
       setStep(nextStep);
       triggerAutosave(profile, nextStep);
@@ -143,7 +193,7 @@ export function OnboardingWizard({
   };
 
   const handlePrevStep = () => {
-    if (step > 1) {
+    if (step > minStep) {
       const prevStep = step - 1;
       setStep(prevStep);
       triggerAutosave(profile, prevStep);
@@ -312,19 +362,22 @@ export function OnboardingWizard({
             <div className="border-b pb-6">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-                  Paso {step} de 7: {STEPS[step - 1].title}
+                  Paso {step} de {TOTAL_STEPS}: {STEPS[step - 1]?.title}
                 </span>
                 <span className="text-xs text-violet-600 font-medium font-mono">
-                  {Math.round((step / 7) * 100)}% COMPLETADO
+                  {Math.round((step / TOTAL_STEPS) * 100)}% COMPLETADO
                 </span>
               </div>
 
               {/* Step indicator pills */}
-              <div className="grid grid-cols-7 gap-1.5">
+              <div className="grid grid-cols-8 gap-1.5">
                 {STEPS.map((s) => (
                   <button
                     key={s.num}
+                    type="button"
                     onClick={() => {
+                      if (s.num < minStep) return;
+                      if (s.num > 1 && !passwordReady) return;
                       setStep(s.num);
                       triggerAutosave(profile, s.num);
                     }}
@@ -351,8 +404,78 @@ export function OnboardingWizard({
                 transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
-                {/* PASO 1: IDENTIDAD */}
+                {/* PASO 1: CONTRASEÑA */}
                 {step === 1 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h2 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+                        Creá tu contraseña
+                      </h2>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Es el acceso a tu cuenta Volt. Usá el email de compra{" "}
+                        <span className="font-mono text-foreground">{order.email}</span> y esta
+                        contraseña para entrar después desde cualquier dispositivo.
+                      </p>
+                    </div>
+
+                    {passwordReady ? (
+                      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 flex items-start gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">Contraseña lista</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Ya podés continuar con la configuración de tu perfil.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4 max-w-md">
+                        <div>
+                          <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                            Nueva contraseña
+                          </label>
+                          <div className="relative">
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <input
+                              type="password"
+                              autoComplete="new-password"
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              placeholder="Mínimo 8 caracteres"
+                              className="w-full rounded-xl border bg-background pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-muted-foreground shadow-soft focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                            Repetí la contraseña
+                          </label>
+                          <div className="relative">
+                            <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <input
+                              type="password"
+                              autoComplete="new-password"
+                              value={password2}
+                              onChange={(e) => setPassword2(e.target.value)}
+                              placeholder="Confirmá tu contraseña"
+                              className="w-full rounded-xl border bg-background pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-muted-foreground shadow-soft focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500"
+                            />
+                          </div>
+                        </div>
+                        {passwordError && (
+                          <p className="text-sm text-rose-600">{passwordError}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Guardala en un lugar seguro. También te enviamos el link del wizard por
+                          email para que no pierdas el acceso si cerrás esta página.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* PASO 2: IDENTIDAD */}
+                {step === 2 && (
                   <div className="space-y-6">
                     <div>
                       <h2 className="font-display text-2xl font-semibold tracking-tight text-foreground">
@@ -434,7 +557,7 @@ export function OnboardingWizard({
                 )}
 
                 {/* PASO 2: TU URL / SLUG */}
-                {step === 2 && (
+                {step === 3 && (
                   <div className="space-y-6">
                     <div>
                       <h2 className="font-display text-2xl font-semibold tracking-tight text-foreground">
@@ -482,7 +605,7 @@ export function OnboardingWizard({
                 )}
 
                 {/* PASO 3: CONTACTO */}
-                {step === 3 && (
+                {step === 4 && (
                   <div className="space-y-6">
                     <div>
                       <h2 className="font-display text-2xl font-semibold tracking-tight text-foreground">
@@ -563,7 +686,7 @@ export function OnboardingWizard({
                 )}
 
                 {/* PASO 4: REDES Y LINKS */}
-                {step === 4 && (
+                {step === 5 && (
                   <div className="space-y-6">
                     <div>
                       <h2 className="font-display text-2xl font-semibold tracking-tight text-foreground">
@@ -686,115 +809,130 @@ export function OnboardingWizard({
                   </div>
                 )}
 
-                {/* PASO 5: DISEÑO */}
-                {step === 5 && (
-                  <div className="space-y-6">
+                {/* PASO 6: DISEÑO */}
+                {step === 6 && (
+                  <div className="space-y-5">
                     <div>
                       <h2 className="font-display text-2xl font-semibold tracking-tight text-foreground">
-                        Plantilla y estilo visual
+                        Plantilla y estilo
                       </h2>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Elegí la plantilla que mejor se adapte a tu profesión y el color de acento.
+                        Vista previa arriba · ajustes abajo. En desktop también ves el mock a la derecha.
                       </p>
                     </div>
 
-                    {/* Plantillas */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {TEMPLATE_CATALOG.map((t) => {
-                        const active = profile.template === t.id;
-                        return (
-                          <button
-                            key={t.id}
-                            type="button"
-                            onClick={() =>
-                              updateProfileState({
-                                template: t.id,
-                                primaryColor: t.defaultColor,
-                              })
-                            }
-                            className={`p-3 rounded-2xl border text-left transition-all relative ${
-                              active
-                                ? "border-violet-500 bg-violet-50 ring-2 ring-violet-500/30"
-                                : "border bg-card hover:border-violet-300"
-                            }`}
-                          >
-                            <div className="text-xs font-semibold text-foreground">{t.name}</div>
-                            <div className="text-[10px] text-muted-foreground truncate mt-0.5">
-                              {t.niche}
-                            </div>
-                            {active && (
-                              <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-violet-600" />
-                            )}
-                          </button>
-                        );
-                      })}
+                    {/* Mobile-only compact live preview */}
+                    <div className="lg:hidden rounded-3xl border bg-secondary/30 p-4">
+                      <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground text-center mb-3">
+                        Vista previa
+                      </p>
+                      <PhonePreview profile={profile} links={links} compact className="mx-auto" />
                     </div>
 
-                    {/* Color de acento */}
-                    <div className="space-y-3 pt-2">
-                      <label className="block text-xs font-medium text-foreground/70">
-                        Color de acento
-                      </label>
-                      <div className="flex flex-wrap gap-2.5">
-                        {PRESETS.map((color) => (
-                          <button
-                            key={color}
-                            type="button"
-                            onClick={() => updateProfileState({ primaryColor: color })}
-                            className={`w-8 h-8 rounded-full border transition-transform ${
-                              profile.primaryColor === color
-                                ? "scale-110 ring-2 ring-violet-600 ring-offset-2 ring-offset-background"
-                                : "hover:scale-105 border-border"
-                            }`}
-                            style={{ backgroundColor: color }}
-                          />
-                        ))}
+                    <div className="rounded-2xl border bg-card p-4 space-y-4">
+                      <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-2">
+                          Plantilla
+                        </label>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                          {TEMPLATE_CATALOG.map((t) => {
+                            const active = profile.template === t.id;
+                            return (
+                              <button
+                                key={t.id}
+                                type="button"
+                                onClick={() =>
+                                  updateProfileState({
+                                    template: t.id,
+                                    primaryColor: t.defaultColor,
+                                  })
+                                }
+                                className={`p-2.5 rounded-xl border text-left transition-all relative ${
+                                  active
+                                    ? "border-violet-500 bg-violet-50 ring-2 ring-violet-500/30"
+                                    : "border bg-background hover:border-violet-300"
+                                }`}
+                              >
+                                <div className="text-xs font-semibold text-foreground">{t.name}</div>
+                                <div className="text-[10px] text-muted-foreground truncate mt-0.5">
+                                  {t.niche}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Modo Claro / Oscuro */}
-                    <div className="space-y-3 pt-2">
-                      <label className="block text-xs font-medium text-foreground/70">
-                        Modo de visualización
-                      </label>
-                      <div className="flex gap-3">
-                        <button
-                          type="button"
-                          onClick={() => updateProfileState({ themeMode: "DARK" })}
-                          className={`flex-1 py-2.5 px-4 rounded-xl border text-xs font-medium transition-colors ${
-                            profile.themeMode === "DARK"
-                              ? "bg-foreground border-foreground text-background"
-                              : "bg-card border text-muted-foreground hover:text-foreground"
-                          }`}
-                        >
-                          Oscuro (Dark)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => updateProfileState({ themeMode: "LIGHT" })}
-                          className={`flex-1 py-2.5 px-4 rounded-xl border text-xs font-medium transition-colors ${
-                            profile.themeMode === "LIGHT"
-                              ? "bg-white text-foreground border-foreground shadow-soft"
-                              : "bg-card border text-muted-foreground hover:text-foreground"
-                          }`}
-                        >
-                          Claro (Light)
-                        </button>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1 border-t">
+                        <div>
+                          <label className="block text-xs font-medium text-muted-foreground mb-2">
+                            Color de acento
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {PRESETS.map((color) => (
+                              <button
+                                key={color}
+                                type="button"
+                                onClick={() => updateProfileState({ primaryColor: color })}
+                                className={`w-7 h-7 rounded-full border transition-transform ${
+                                  profile.primaryColor === color
+                                    ? "scale-110 ring-2 ring-violet-600 ring-offset-2 ring-offset-background"
+                                    : "hover:scale-105 border-border"
+                                }`}
+                                style={{ backgroundColor: color }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-muted-foreground mb-2">
+                            Tema del perfil
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => updateProfileState({ themeMode: "DARK" })}
+                              className={`py-2.5 rounded-xl border text-xs font-medium transition-colors ${
+                                profile.themeMode === "DARK"
+                                  ? "bg-foreground border-foreground text-background"
+                                  : "bg-background border text-muted-foreground"
+                              }`}
+                            >
+                              Oscuro
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => updateProfileState({ themeMode: "LIGHT" })}
+                              className={`py-2.5 rounded-xl border text-xs font-medium transition-colors ${
+                                profile.themeMode === "LIGHT"
+                                  ? "bg-white text-foreground border-foreground shadow-soft"
+                                  : "bg-background border text-muted-foreground"
+                              }`}
+                            >
+                              Claro
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* PASO 6: VISTA PREVIA */}
-                {step === 6 && (
+                {/* PASO 7: VISTA PREVIA */}
+                {step === 7 && (
                   <div className="space-y-6">
                     <div>
                       <h2 className="font-display text-2xl font-semibold tracking-tight text-foreground">
                         Vista previa de tu perfil
                       </h2>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Así es exactamente como se verá tu perfil cuando alguien acerque tu Volt Card o escanee tu QR.
+                        Así se verá cuando alguien acerque tu Volt Card o escanee tu QR.
                       </p>
+                    </div>
+
+                    <div className="lg:hidden flex justify-center py-2">
+                      <PhonePreview profile={profile} links={links} compact />
                     </div>
 
                     <div className="p-4 rounded-2xl border bg-card space-y-3 text-sm">
@@ -822,8 +960,8 @@ export function OnboardingWizard({
                   </div>
                 )}
 
-                {/* PASO 7: CONFIRMACIÓN */}
-                {step === 7 && (
+                {/* PASO 8: CONFIRMACIÓN */}
+                {step === 8 && (
                   <div className="space-y-6">
                     <div>
                       <h2 className="font-display text-2xl font-semibold tracking-tight text-foreground">
@@ -876,11 +1014,11 @@ export function OnboardingWizard({
           </div>
 
           {/* Botones de Navegación Inferior */}
-          {step < 7 && (
+          {step < TOTAL_STEPS && (
             <div className="flex items-center justify-between pt-8 border-t mt-8">
               <button
                 type="button"
-                disabled={step === 1}
+                disabled={step === minStep}
                 onClick={handlePrevStep}
                 className="px-5 py-2.5 rounded-xl border hover:bg-secondary text-muted-foreground hover:text-foreground text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-30 disabled:pointer-events-none"
               >
@@ -890,18 +1028,28 @@ export function OnboardingWizard({
 
               <button
                 type="button"
+                disabled={savingPassword}
                 onClick={handleNextStep}
-                className="px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition-colors flex items-center gap-2 shadow-lg shadow-violet-500/25"
+                className="px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition-colors flex items-center gap-2 shadow-lg shadow-violet-500/25 disabled:opacity-50"
               >
-                <span>Continuar</span>
-                <ArrowRight className="w-4 h-4" />
+                {savingPassword ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Guardando...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{step === 1 && !passwordReady ? "Guardar y continuar" : "Continuar"}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </div>
           )}
         </div>
 
-        {/* Columna Derecha: Vista Previa Móvil Interactiva (5 cols) */}
-        <div className="lg:col-span-5 flex justify-center items-start">
+        {/* Desktop-only sticky preview */}
+        <div className="hidden lg:col-span-5 lg:flex justify-center items-start">
           <div className="sticky top-24 w-full max-w-[340px]">
             <div className="text-center mb-3">
               <span className="text-[11px] font-mono tracking-wider uppercase text-muted-foreground">

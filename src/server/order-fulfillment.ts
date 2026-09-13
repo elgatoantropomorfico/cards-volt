@@ -41,7 +41,16 @@ export async function handleApprovedOrder({
   }
 
   // Idempotency: If order was already confirmed and approved, skip re-execution
+  // but still try to send purchase email if it never went out (e.g. Resend key added later)
   if (order.paymentStatus === "APPROVED" && order.profileId) {
+    if (!order.purchaseEmailSentAt) {
+      try {
+        const { sendPurchaseReceiptEmail } = await import("@/server/email/send-purchase-email");
+        await sendPurchaseReceiptEmail(order.id);
+      } catch (err) {
+        console.error("[fulfillment] purchase email retry failed", err);
+      }
+    }
     return { ok: true, order, alreadyProcessed: true };
   }
 
@@ -242,6 +251,14 @@ export async function handleApprovedOrder({
         });
       }
     }
+  }
+
+  // 7. Purchase receipt email (idempotent via purchaseEmailSentAt)
+  try {
+    const { sendPurchaseReceiptEmail } = await import("@/server/email/send-purchase-email");
+    await sendPurchaseReceiptEmail(order.id);
+  } catch (err) {
+    console.error("[fulfillment] purchase email failed", err);
   }
 
   return { ok: true, order: updatedOrder, alreadyProcessed: false };

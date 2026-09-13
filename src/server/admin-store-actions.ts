@@ -320,3 +320,69 @@ export async function updateStoreSettings(input: {
   revalidatePath("/admin");
   return { ok: true };
 }
+
+export async function updateResendApiKey(apiKey: string) {
+  await requireRole("SUPERADMIN");
+  await prisma.storeSetting.upsert({
+    where: { id: "default" },
+    update: { resendApiKey: apiKey.trim() },
+    create: { id: "default", resendApiKey: apiKey.trim() },
+  });
+  revalidatePath("/admin");
+  return { ok: true as const };
+}
+
+export async function upsertStoreMailbox(input: {
+  id?: string;
+  email: string;
+  label: string;
+  role?: string;
+  active?: boolean;
+  notes?: string | null;
+}) {
+  await requireRole("SUPERADMIN");
+  const email = input.email.trim().toLowerCase();
+  const label = input.label.trim() || email;
+  const role = (input.role || "GENERAL").trim().toUpperCase();
+  const active = input.active ?? true;
+
+  if (!email.includes("@")) {
+    return { ok: false as const, error: "Email inválido" };
+  }
+
+  if (input.id) {
+    await prisma.storeMailbox.update({
+      where: { id: input.id },
+      data: { email, label, role, active, notes: input.notes?.trim() || null },
+    });
+  } else {
+    await prisma.storeMailbox.upsert({
+      where: { email },
+      update: { label, role, active, notes: input.notes?.trim() || null },
+      create: { email, label, role, active, notes: input.notes?.trim() || null },
+    });
+  }
+
+  revalidatePath("/admin");
+  return { ok: true as const };
+}
+
+export async function setStoreMailboxActive(input: { id: string; active: boolean }) {
+  await requireRole("SUPERADMIN");
+  await prisma.storeMailbox.update({
+    where: { id: input.id },
+    data: { active: input.active },
+  });
+  revalidatePath("/admin");
+  return { ok: true as const };
+}
+
+export async function sendAdminTestPurchaseEmail(toEmail: string) {
+  await requireRole("SUPERADMIN");
+  const email = toEmail.trim().toLowerCase();
+  if (!email.includes("@")) {
+    return { ok: false as const, error: "Email inválido" };
+  }
+  const { sendTestPurchaseReceiptEmail } = await import("@/server/email/send-purchase-email");
+  return sendTestPurchaseReceiptEmail(email);
+}

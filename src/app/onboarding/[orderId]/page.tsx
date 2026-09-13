@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { profileToView } from "@/server/profile-shape";
 import { OnboardingWizard } from "./OnboardingWizard";
@@ -28,6 +28,15 @@ export default async function OnboardingPage({
     notFound();
   }
 
+  const credential = order.userId
+    ? await prisma.account.findFirst({
+        where: { userId: order.userId, providerId: "credential" },
+        select: { password: true },
+      })
+    : null;
+
+  const needsPassword = !credential?.password;
+
   const profileView = profileToView(order.profile);
   const links = order.profile.links.map((l) => ({
     id: l.id,
@@ -47,10 +56,12 @@ export default async function OnboardingPage({
         orderNumber: order.orderNumber,
         profileStatus: order.profile.profileStatus,
         fulfillmentStatus: order.fulfillmentStatus,
+        email: order.email,
       }}
       initialProfile={profileView}
       initialLinks={links}
       appHost={appHost}
+      needsPassword={needsPassword}
     />
   );
 }

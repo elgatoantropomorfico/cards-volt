@@ -9,15 +9,17 @@ export function PhonePreview({
   profile,
   links,
   className,
+  compact = false,
 }: {
   profile: ProfileView;
   links: ProfileLink[];
   className?: string;
+  compact?: boolean;
 }) {
   const key = `${profile.template}-${profile.themeMode}-${profile.primaryColor}`;
   return (
     <div className={className}>
-      <div className="phone-frame mx-auto">
+      <div className={`phone-frame mx-auto ${compact ? "phone-frame--compact" : ""}`}>
         <div className="phone-screen relative">
           <div className="phone-notch" />
           <AnimatePresence mode="wait" initial={false}>

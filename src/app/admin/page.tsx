@@ -10,7 +10,7 @@ export default async function AdminPage() {
   const user = await requireRole("SUPERADMIN");
   await ensureStoreCatalog();
 
-  const [users, cards, profiles, metrics, orders, products, stockMovements, storeSettings] =
+  const [users, cards, profiles, metrics, orders, products, stockMovements, storeSettings, mailboxes] =
     await Promise.all([
       prisma.user.findMany({
         orderBy: { createdAt: "desc" },
@@ -55,6 +55,7 @@ export default async function AdminPage() {
         },
       }),
       prisma.storeSetting.findUnique({ where: { id: "default" } }),
+      prisma.storeMailbox.findMany({ orderBy: { createdAt: "asc" } }),
     ]);
 
   const settingsMap: Record<string, string> = {
@@ -64,6 +65,8 @@ export default async function AdminPage() {
     MERCADOPAGO_SANDBOX: storeSettings?.mpSandbox ? "true" : "false",
     SHIPPING_ORIGIN_ADDRESS: storeSettings?.shippingOriginAddress || "",
     SHIPPING_ORIGIN_POSTAL_CODE: storeSettings?.shippingOriginPostalCode || "",
+    RESEND_API_KEY: storeSettings?.resendApiKey ? "••••••••" : "",
+    RESEND_API_KEY_SET: storeSettings?.resendApiKey ? "true" : "false",
   };
 
   const appHost =
@@ -123,6 +126,14 @@ export default async function AdminPage() {
         })),
         stockMovements,
         settings: settingsMap,
+        mailboxes: mailboxes.map((m) => ({
+          id: m.id,
+          email: m.email,
+          label: m.label,
+          role: m.role,
+          active: m.active,
+          notes: m.notes,
+        })),
         appHost,
       }}
     />

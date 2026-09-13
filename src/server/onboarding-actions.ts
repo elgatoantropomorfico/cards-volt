@@ -14,29 +14,30 @@ const KIND_VALUES = [
 const OnboardingAutosaveSchema = z.object({
   orderId: z.string(),
   profileId: z.string(),
-  currentStep: z.number().int().min(1).max(7),
-  // Step 1: Identity
+  currentStep: z.number().int().min(1).max(8),
+  // Step 1: Password (handled separately)
+  // Step 2: Identity
   fullName: z.string().optional().nullable(),
   jobTitle: z.string().optional().nullable(),
   companyName: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   avatarUrl: z.string().optional().nullable(),
-  // Step 2: Slug
+  // Step 3: Slug
   slug: z.string().optional().nullable(),
-  // Step 3: Contact
+  // Step 4: Contact
   email: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
   whatsapp: z.string().optional().nullable(),
   website: z.string().optional().nullable(),
   location: z.string().optional().nullable(),
-  // Step 4: Socials
+  // Step 5: Socials
   instagram: z.string().optional().nullable(),
   linkedin: z.string().optional().nullable(),
   twitter: z.string().optional().nullable(),
   tiktok: z.string().optional().nullable(),
   youtube: z.string().optional().nullable(),
   github: z.string().optional().nullable(),
-  // Step 5: Design
+  // Step 6: Design
   template: z.enum(TEMPLATE_VALUES).optional(),
   primaryColor: z.string().optional(),
   themeMode: z.enum(["LIGHT", "DARK"]).optional(),
@@ -192,7 +193,7 @@ export async function finalizeOnboarding(input: { orderId: string; profileId: st
         profileStatus: "READY",
         onboardingStatus: "COMPLETED",
         onboardingDoneAt: new Date(),
-        onboardingStep: 7,
+        onboardingStep: 8,
       },
     }),
     prisma.order.update({
@@ -228,4 +229,63 @@ export async function finalizeOnboarding(input: { orderId: string; profileId: st
   });
 
   return { ok: true, pendingSeats };
+}
+
+/**
+ * Primer paso del wizard: crea la contraseña de login del comprador.
+ */
+export async function setOnboardingPassword(input: {
+  orderId: string;
+  profileId: string;
+  password: string;
+}) {
+  const password = input.password.trim();
+  if (password.length < 8) {
+    return { ok: false as const, error: "La contraseña debe tener al menos 8 caracteres" };
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { id: input.orderId },
+    select: { id: true, profileId: true, userId: true, email: true },
+  });
+
+  if (!order || order.profileId !== input.profileId || !order.userId) {
+    return { ok: false as const, error: "No autorizado" };
+  }
+
+  const { hashPassword } = await import("better-auth/crypto");
+  const { generatePublicId } = await import("@/lib/id");
+  const hashed = await hashPassword(password);
+
+  const existing = await prisma.account.findFirst({
+    where: { userId: order.userId, providerId: "credential" },
+  });
+
+  if (existing) {
+    await prisma.account.update({
+      where: { id: existing.id },
+      data: { password: hashed },
+    });
+  } else {
+    await prisma.account.create({
+      data: {
+        id: generatePublicId() + generatePublicId(),
+        accountId: order.userId,
+        providerId: "credential",
+        userId: order.userId,
+        password: hashed,
+      },
+    });
+  }
+
+  await prisma.profile.update({
+    where: { id: input.profileId },
+    data: {
+      onboardingStatus: "IN_PROGRESS",
+      onboardingStep: Math.max(2, 2),
+      profileStatus: "CONFIGURING",
+    },
+  });
+
+  return { ok: true as const };
 }

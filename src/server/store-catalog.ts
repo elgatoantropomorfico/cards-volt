@@ -59,4 +59,20 @@ export async function ensureStoreCatalog() {
       },
     });
   }
+
+  // Ensure sales mailbox for purchase receipts
+  const salesMailbox = await prisma.storeMailbox.findUnique({
+    where: { email: "ventas@cards.voltaiagents.com" },
+  });
+  if (!salesMailbox) {
+    await prisma.storeMailbox.create({
+      data: {
+        email: "ventas@cards.voltaiagents.com",
+        label: "Ventas Volt Cards",
+        role: "SALES",
+        active: true,
+        notes: "Solo envío: confirmaciones de compra y link de onboarding.",
+      },
+    });
+  }
 }

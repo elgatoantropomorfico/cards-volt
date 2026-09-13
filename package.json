@@ -14,7 +14,7 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "railway:release": "prisma migrate deploy && tsx prisma/seed.ts"
+    "railway:release": "prisma db push && tsx prisma/seed.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -53,6 +53,7 @@
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "resend": "^6.28.0",
     "tailwind-merge": "^2.5.4",
     "tailwindcss": "^3.4.14",
     "three": "^0.186.0",

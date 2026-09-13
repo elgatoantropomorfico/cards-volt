@@ -23,6 +23,8 @@ import {
   Loader2,
   ShieldCheck,
   RefreshCw,
+  Mail,
+  Send,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,9 +35,22 @@ import {
   recordInventoryAdjustment,
   updateStoreSettings,
   updateAdminProduct,
+  updateResendApiKey,
+  upsertStoreMailbox,
+  setStoreMailboxActive,
+  sendAdminTestPurchaseEmail,
 } from "@/server/admin-store-actions";
 
-type StoreTab = "dashboard" | "orders" | "products" | "stock" | "shipping" | "settings";
+type StoreTab = "dashboard" | "orders" | "products" | "stock" | "shipping" | "emails" | "settings";
+
+type MailboxRow = {
+  id: string;
+  email: string;
+  label: string;
+  role: string;
+  active: boolean;
+  notes: string | null;
+};
 
 export function StoreManager({
   metrics,
@@ -43,6 +58,7 @@ export function StoreManager({
   products,
   stockMovements,
   settings,
+  mailboxes,
   appHost,
 }: {
   metrics: {
@@ -58,6 +74,7 @@ export function StoreManager({
   products: any[];
   stockMovements: any[];
   settings: Record<string, string>;
+  mailboxes: MailboxRow[];
   appHost: string;
 }) {
   const [tab, setTab] = React.useState<StoreTab>("dashboard");
@@ -120,6 +137,17 @@ export function StoreManager({
           className="gap-2"
         >
           <Truck className="h-4 w-4" /> Envíos
+        </Button>
+        <Button
+          variant={tab === "emails" ? "default" : "outline"}
+          size="sm"
+          onClick={() => {
+            setTab("emails");
+            setSelectedOrderId(null);
+          }}
+          className="gap-2"
+        >
+          <Mail className="h-4 w-4" /> Correos
         </Button>
         <Button
           variant={tab === "settings" ? "default" : "outline"}
@@ -367,6 +395,7 @@ export function StoreManager({
 
       {/* SETTINGS TAB */}
       {tab === "settings" && <StoreSettingsSection settings={settings} />}
+      {tab === "emails" && <StoreEmailsSection settings={settings} mailboxes={mailboxes} />}
     </div>
   );
 }
@@ -1118,5 +1147,228 @@ function StoreSettingsSection({ settings }: { settings: Record<string, string> }
         </Button>
       </div>
     </form>
+  );
+}
+
+function StoreEmailsSection({
+  settings,
+  mailboxes: initialMailboxes,
+}: {
+  settings: Record<string, string>;
+  mailboxes: MailboxRow[];
+}) {
+  const router = useRouter();
+  const [apiKey, setApiKey] = React.useState("");
+  const [savingKey, setSavingKey] = React.useState(false);
+  const [testTo, setTestTo] = React.useState("");
+  const [sendingTest, setSendingTest] = React.useState(false);
+  const [newEmail, setNewEmail] = React.useState("");
+  const [newLabel, setNewLabel] = React.useState("");
+  const [newRole, setNewRole] = React.useState("GENERAL");
+  const [adding, setAdding] = React.useState(false);
+  const keySet = settings.RESEND_API_KEY_SET === "true";
+
+  const saveKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!apiKey.trim()) {
+      toast({ title: "Pegá la API key de Resend", variant: "error" });
+      return;
+    }
+    setSavingKey(true);
+    const res = await updateResendApiKey(apiKey);
+    setSavingKey(false);
+    if (res.ok) {
+      setApiKey("");
+      toast({ title: "API key de Resend guardada", variant: "success" });
+      router.refresh();
+    } else {
+      toast({ title: "No se pudo guardar la API key", variant: "error" });
+    }
+  };
+
+  const sendTest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSendingTest(true);
+    const res = await sendAdminTestPurchaseEmail(testTo);
+    setSendingTest(false);
+    if (res.ok) {
+      toast({ title: "Correo de prueba enviado", description: testTo, variant: "success" });
+    } else {
+      toast({
+        title: "Error al enviar",
+        description: "error" in res ? res.error : "Revisá la API key y el dominio en Resend",
+        variant: "error",
+      });
+    }
+  };
+
+  const addMailbox = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdding(true);
+    const res = await upsertStoreMailbox({
+      email: newEmail,
+      label: newLabel || newEmail,
+      role: newRole,
+      active: true,
+    });
+    setAdding(false);
+    if (res.ok) {
+      setNewEmail("");
+      setNewLabel("");
+      setNewRole("GENERAL");
+      toast({ title: "Correo dado de alta", variant: "success" });
+      router.refresh();
+    } else {
+      toast({
+        title: "No se pudo agregar",
+        description: "error" in res ? res.error : undefined,
+        variant: "error",
+      });
+    }
+  };
+
+  const toggleActive = async (id: string, active: boolean) => {
+    const res = await setStoreMailboxActive({ id, active });
+    if (res.ok) {
+      toast({
+        title: active ? "Correo activado" : "Correo desactivado",
+        variant: "success",
+      });
+      router.refresh();
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Resend · API Key</CardTitle>
+          <CardDescription>
+            Conectá tu cuenta de Resend. El dominio cards.voltaiagents.com debe estar verificado allí.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={saveKey} className="space-y-3">
+            <div className="flex items-center gap-2 text-xs">
+              <Badge variant={keySet ? "default" : "secondary"}>
+                {keySet ? "API key configurada" : "Sin API key"}
+              </Badge>
+            </div>
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder={keySet ? "Pegá una nueva key para reemplazar…" : "re_…"}
+              className="w-full bg-secondary border rounded-xl px-4 py-2.5 text-xs font-mono"
+            />
+            <Button type="submit" disabled={savingKey} className="gap-2">
+              {savingKey ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Guardar API key
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Buzones de envío</CardTitle>
+          <CardDescription>
+            Activá correos verificados en Resend. <strong>Ventas</strong> se usa para el recibo de
+            compra + link del wizard. Más adelante podés sumar otros y abrirlos en un cliente de correo.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            {initialMailboxes.map((m) => (
+              <div
+                key={m.id}
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border bg-card"
+              >
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold font-mono">{m.email}</p>
+                    <Badge variant="secondary">{m.role}</Badge>
+                    <Badge variant={m.active ? "default" : "outline"}>
+                      {m.active ? "Activo" : "Inactivo"}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {m.label}
+                    {m.notes ? ` · ${m.notes}` : ""}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => toggleActive(m.id, !m.active)}
+                >
+                  {m.active ? "Desactivar" : "Activar"}
+                </Button>
+              </div>
+            ))}
+            {initialMailboxes.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                Todavía no hay buzones. Se crea ventas@ automáticamente al cargar el catálogo.
+              </p>
+            )}
+          </div>
+
+          <form onSubmit={addMailbox} className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 border-t">
+            <input
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder="nuevo@cards.voltaiagents.com"
+              className="sm:col-span-2 bg-secondary border rounded-xl px-3 py-2.5 text-xs font-mono"
+              required
+            />
+            <input
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              placeholder="Etiqueta"
+              className="bg-secondary border rounded-xl px-3 py-2.5 text-xs"
+            />
+            <select
+              value={newRole}
+              onChange={(e) => setNewRole(e.target.value)}
+              className="bg-secondary border rounded-xl px-3 py-2.5 text-xs"
+            >
+              <option value="SALES">SALES (compras)</option>
+              <option value="GENERAL">GENERAL</option>
+              <option value="SUPPORT">SUPPORT</option>
+            </select>
+            <Button type="submit" disabled={adding} className="sm:col-span-4 gap-2">
+              {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              Dar de alta correo
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Correo de prueba</CardTitle>
+          <CardDescription>
+            Envía el mismo formato de confirmación de compra con datos mock desde el buzón de ventas activo.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={sendTest} className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="email"
+              required
+              value={testTo}
+              onChange={(e) => setTestTo(e.target.value)}
+              placeholder="tu@email.com"
+              className="flex-1 bg-secondary border rounded-xl px-4 py-2.5 text-xs"
+            />
+            <Button type="submit" disabled={sendingTest} className="gap-2">
+              {sendingTest ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Enviar prueba
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
