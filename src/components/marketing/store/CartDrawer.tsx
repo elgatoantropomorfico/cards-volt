@@ -5,9 +5,9 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Minus, Plus, Trash2, ArrowRight, ShieldCheck, Sparkles, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ProductThumb } from "./ProductThumb";
 import { useCart } from "./CartContext";
 import { cartLines, cartTotal, formatArs } from "@/lib/store-products";
-import { ProductCardPreview } from "./ProductCardPreview";
 
 export function CartDrawer() {
   const { drawerOpen, setDrawerOpen, items, prices, increment, decrement, setQuantity, clearCart } = useCart();
@@ -97,12 +97,10 @@ export function CartDrawer() {
                       key={line.productId}
                       className="flex gap-3 rounded-2xl border bg-card p-3.5 shadow-soft transition hover:border-foreground/20"
                     >
-                      {/* Mini 3D Preview representation */}
-                      <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-xl bg-neutral-100 dark:bg-neutral-900 grid place-items-center">
-                        <div className="scale-[0.45]">
-                          <ProductCardPreview variant={line.product.variant} />
-                        </div>
-                      </div>
+                      <ProductThumb
+                        variant={line.product.variant}
+                        className="h-20 w-24 shrink-0 rounded-xl border"
+                      />
 
                       {/* Info & Quantity */}
                       <div className="flex flex-1 flex-col justify-between">

@@ -53,7 +53,7 @@ function ProductCard({
           product.variant === "white" ? "bg-neutral-100/80" : "bg-neutral-950",
         )}
       >
-        <ProductCardPreview variant={product.variant} />
+        <ProductCardPreview variant={product.variant} priority={productId === "white"} />
       </div>
 
       <div className="flex flex-1 flex-col p-6 pt-5">
