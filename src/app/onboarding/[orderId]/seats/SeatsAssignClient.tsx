@@ -85,12 +85,12 @@ export function SeatsAssignClient({
   const allDone = seats.every((s) => s.status !== "PENDING_ASSIGNMENT");
 
   return (
-    <main className="min-h-screen bg-[#07060A] text-white px-4 py-12 selection:bg-[#7000FF]">
+    <main className="relative min-h-screen bg-background text-foreground px-4 py-12">
       <div className="max-w-2xl mx-auto space-y-8">
         <div className="space-y-2">
-          <p className="text-xs font-mono text-[#A855F7]">{orderNumber}</p>
+          <p className="text-xs font-mono text-violet-600">{orderNumber}</p>
           <h1 className="text-3xl font-extrabold tracking-tight">Asigná el resto de tus Volt Cards</h1>
-          <p className="text-sm text-white/60 leading-relaxed">
+          <p className="text-sm text-muted-foreground leading-relaxed">
             Ya configuraste tu tarjeta principal. Para las demás, solo necesitamos nombre + email:
             creamos la cuenta y el perfil vacío. Cada persona completa sus datos después, cuando quiera.
           </p>
@@ -102,15 +102,15 @@ export function SeatsAssignClient({
               return (
                 <div
                   key={seat.id}
-                  className="p-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between gap-3"
+                  className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50 flex items-center justify-between gap-3"
                 >
                   <div>
                     <p className="text-sm font-semibold">Tarjeta #{seat.seatIndex + 1} · Principal</p>
-                    <p className="text-xs text-white/50">
+                    <p className="text-xs text-muted-foreground">
                       {seat.profile ? `/${seat.profile.slug}` : "Tu wizard"}
                     </p>
                   </div>
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                 </div>
               );
             }
@@ -120,25 +120,25 @@ export function SeatsAssignClient({
               return (
                 <div
                   key={seat.id}
-                  className="p-4 rounded-2xl border border-white/10 bg-white/[0.02] space-y-2"
+                  className="p-4 rounded-2xl border bg-card space-y-2"
                 >
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold">
                       Tarjeta #{seat.seatIndex + 1} · Asignada
                     </p>
-                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                   </div>
-                  <p className="text-xs text-white/60">
+                  <p className="text-xs text-muted-foreground">
                     {seat.assigneeName} · {seat.assigneeEmail} · /{seat.profile?.slug}
                   </p>
                   {cred && (
-                    <div className="mt-2 p-3 rounded-xl bg-[#7000FF]/10 border border-[#7000FF]/30 text-xs font-mono space-y-1">
-                      <p className="text-white/80">Credenciales temporales (guardalas ahora):</p>
+                    <div className="mt-2 p-3 rounded-xl bg-violet-50 border border-violet-200 text-xs font-mono space-y-1">
+                      <p className="text-muted-foreground">Credenciales temporales (guardalas ahora):</p>
                       <p>Email: {cred.email}</p>
                       <p>Pass: {cred.password}</p>
                       <button
                         type="button"
-                        className="inline-flex items-center gap-1 text-[#A855F7] mt-1"
+                        className="inline-flex items-center gap-1 text-violet-600 mt-1"
                         onClick={() =>
                           navigator.clipboard.writeText(
                             `Email: ${cred.email}\nPassword: ${cred.password}\nLogin: /login`,
@@ -157,10 +157,10 @@ export function SeatsAssignClient({
             return (
               <div
                 key={seat.id}
-                className="p-4 rounded-2xl border border-white/10 bg-white/[0.02] space-y-3"
+                className="p-4 rounded-2xl border bg-card space-y-3"
               >
                 <p className="text-sm font-semibold flex items-center gap-2">
-                  <UserPlus className="w-4 h-4 text-[#A855F7]" />
+                  <UserPlus className="w-4 h-4 text-violet-600" />
                   Tarjeta #{seat.seatIndex + 1} · Alta rápida
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -170,7 +170,7 @@ export function SeatsAssignClient({
                     onChange={(e) =>
                       setForms((prev) => ({ ...prev, [seat.id]: { ...f, name: e.target.value } }))
                     }
-                    className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm"
+                    className="rounded-xl border bg-background px-3 py-2.5 text-sm shadow-soft"
                   />
                   <input
                     placeholder="Email"
@@ -179,14 +179,14 @@ export function SeatsAssignClient({
                     onChange={(e) =>
                       setForms((prev) => ({ ...prev, [seat.id]: { ...f, email: e.target.value } }))
                     }
-                    className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm"
+                    className="rounded-xl border bg-background px-3 py-2.5 text-sm shadow-soft"
                   />
                 </div>
                 <button
                   type="button"
                   disabled={loadingId === seat.id}
                   onClick={() => handleAssign(seat.id)}
-                  className="w-full py-2.5 rounded-xl bg-[#7000FF] hover:bg-[#8A2BE2] text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {loadingId === seat.id ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -201,7 +201,7 @@ export function SeatsAssignClient({
         </div>
 
         {error && (
-          <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm">
+          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm">
             {error}
           </div>
         )}
@@ -210,14 +210,14 @@ export function SeatsAssignClient({
           {allDone ? (
             <Link
               href="/dashboard"
-              className="flex-1 py-3 rounded-xl bg-[#7000FF] hover:bg-[#8A2BE2] text-center text-sm font-semibold flex items-center justify-center gap-2"
+              className="flex-1 py-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-center text-sm font-semibold flex items-center justify-center gap-2"
             >
               Ir a mi panel <ArrowRight className="w-4 h-4" />
             </Link>
           ) : (
             <Link
               href="/dashboard"
-              className="flex-1 py-3 rounded-xl border border-white/10 hover:bg-white/5 text-center text-sm text-white/70"
+              className="flex-1 py-3 rounded-xl border hover:bg-secondary text-center text-sm text-muted-foreground"
             >
               Guardar y asignar más tarde
             </Link>
