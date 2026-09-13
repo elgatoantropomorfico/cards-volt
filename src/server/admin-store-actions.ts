@@ -233,8 +233,10 @@ export async function updateAdminProduct(input: {
     data,
   });
 
-  revalidatePath("/admin");
+  revalidatePath("/", "layout");
   revalidatePath("/");
+  revalidatePath("/admin");
+  revalidatePath("/api/store/catalog");
   return { ok: true as const };
 }
 

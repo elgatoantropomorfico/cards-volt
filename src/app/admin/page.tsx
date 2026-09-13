@@ -103,8 +103,24 @@ export default async function AdminPage() {
       }))}
       storeData={{
         metrics,
-        orders,
-        products,
+        orders: orders.map((o) => ({
+          ...o,
+          total: Number(o.total),
+          subtotal: Number(o.subtotal),
+          shippingTotal: Number(o.shippingTotal),
+          discountTotal: Number(o.discountTotal),
+          items: o.items.map((it) => ({
+            ...it,
+            unitPrice: Number(it.unitPrice),
+            subtotal: Number(it.subtotal),
+          })),
+        })),
+        products: products.map((p) => ({
+          ...p,
+          price: Number(p.price),
+          monthlyPrice: p.monthlyPrice != null ? Number(p.monthlyPrice) : Math.round(Number(p.price) / 12),
+          compareAtPrice: p.compareAtPrice != null ? Number(p.compareAtPrice) : null,
+        })),
         stockMovements,
         settings: settingsMap,
         appHost,

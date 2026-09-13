@@ -14,6 +14,7 @@ type CartContextValue = {
   count: number;
   prices: PriceMap;
   pricesReady: boolean;
+  hydratePrices: (prices: PriceMap) => void;
   setQuantity: (productId: ProductId, quantity: number) => void;
   increment: (productId: ProductId) => void;
   decrement: (productId: ProductId) => void;
@@ -27,12 +28,28 @@ const CartContext = React.createContext<CartContextValue | null>(null);
 
 const STORAGE_KEY = "voltcards_cart_v1";
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
+export function CartProvider({
+  children,
+  initialPrices = {},
+}: {
+  children: React.ReactNode;
+  initialPrices?: PriceMap;
+}) {
   const [items, setItems] = React.useState<CartLine[]>(emptyCart);
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [hydrated, setHydrated] = React.useState(false);
-  const [prices, setPrices] = React.useState<PriceMap>({});
-  const [pricesReady, setPricesReady] = React.useState(false);
+  const [prices, setPrices] = React.useState<PriceMap>(initialPrices);
+  const [pricesReady, setPricesReady] = React.useState(
+    Object.keys(initialPrices).length > 0,
+  );
+
+  // Keep SSR prices in sync when the server revalidates and remounts with new props
+  React.useEffect(() => {
+    if (initialPrices && Object.keys(initialPrices).length > 0) {
+      setPrices(initialPrices);
+      setPricesReady(true);
+    }
+  }, [initialPrices]);
 
   // Load cart from localStorage on mount
   React.useEffect(() => {
@@ -52,12 +69,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setHydrated(true);
   }, []);
 
-  // Live catalog prices from DB (Superadmin-editable)
+  // Client refresh of live catalog (no-store) — backup if SSR prices missing
   React.useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/store/catalog");
+        const res = await fetch("/api/store/catalog", { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
         const map: PriceMap = {};
@@ -69,9 +86,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             };
           }
         }
-        if (!cancelled) setPrices(map);
+        if (!cancelled && Object.keys(map).length > 0) {
+          setPrices(map);
+          setPricesReady(true);
+        }
       } catch {
-        // fallback: hardcoded defaults in store-products
+        // keep SSR / hardcoded fallback
       } finally {
         if (!cancelled) setPricesReady(true);
       }
@@ -88,6 +108,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     } catch {}
   }, [items, hydrated]);
+
+  const hydratePrices = React.useCallback((next: PriceMap) => {
+    if (next && Object.keys(next).length > 0) {
+      setPrices(next);
+      setPricesReady(true);
+    }
+  }, []);
 
   const setQuantity = React.useCallback((productId: ProductId, quantity: number) => {
     setItems((prev) =>
@@ -135,6 +162,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       count: cartItemCount(items),
       prices,
       pricesReady,
+      hydratePrices,
       setQuantity,
       increment,
       decrement,
@@ -143,7 +171,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       drawerOpen,
       setDrawerOpen,
     }),
-    [items, prices, pricesReady, setQuantity, increment, decrement, addOne, clearCart, drawerOpen],
+    [
+      items,
+      prices,
+      pricesReady,
+      hydratePrices,
+      setQuantity,
+      increment,
+      decrement,
+      addOne,
+      clearCart,
+      drawerOpen,
+    ],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
@@ -158,4 +197,13 @@ export function useCart() {
 export function useCartQuantity(productId: ProductId) {
   const { items } = useCart();
   return items.find((i) => i.productId === productId)?.quantity ?? 0;
+}
+
+/** Injects SSR catalog prices into the cart context as soon as the landing mounts. */
+export function CatalogPriceBootstrap({ prices }: { prices: PriceMap }) {
+  const { hydratePrices } = useCart();
+  React.useLayoutEffect(() => {
+    hydratePrices(prices);
+  }, [prices, hydratePrices]);
+  return null;
 }

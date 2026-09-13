@@ -3,6 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ShoppingBag,
   TrendingUp,
@@ -394,6 +395,7 @@ function ProductsEditorSection({ products }: { products: any[] }) {
 }
 
 function ProductEditorCard({ product }: { product: any }) {
+  const router = useRouter();
   const [name, setName] = React.useState(product.name);
   const [monthly, setMonthly] = React.useState(Number(product.monthlyPrice ?? Number(product.price) / 12));
   const [annual, setAnnual] = React.useState(Number(product.price));
@@ -420,8 +422,10 @@ function ProductEditorCard({ product }: { product: any }) {
       active,
     });
     setSaving(false);
-    if (res.ok) toast({ title: "Producto actualizado · precios vivos en tienda y MP", variant: "success" });
-    else toast({ title: "Error", description: res.error, variant: "error" });
+    if (res.ok) {
+      toast({ title: "Producto actualizado · precios vivos en tienda y MP", variant: "success" });
+      router.refresh();
+    } else toast({ title: "Error", description: res.error, variant: "error" });
   };
 
   return (

@@ -9,16 +9,30 @@ import {
   formatArs,
   type ProductId,
 } from "@/lib/store-products";
+import type { CatalogProduct } from "@/server/get-live-catalog";
 import { Check, Minus, Plus, ShoppingCart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-function ProductCard({ productId }: { productId: ProductId }) {
+function ProductCard({
+  productId,
+  catalog,
+}: {
+  productId: ProductId;
+  catalog?: CatalogProduct;
+}) {
   const product = STORE_PRODUCTS.find((p) => p.id === productId)!;
   const qty = useCartQuantity(productId);
   const { increment, decrement, addOne, prices } = useCart();
+
+  // Priority: live cart prices (SSR + API) → catalog prop from server → hardcoded fallback
   const live = prices[productId];
-  const monthly = live?.monthlyPrice ?? product.monthlyPrice;
-  const annual = live?.annualPrice ?? annualUnitPrice(monthly);
+  const monthly =
+    live?.monthlyPrice ?? catalog?.monthlyPrice ?? product.monthlyPrice;
+  const annual =
+    live?.annualPrice ?? catalog?.price ?? annualUnitPrice(monthly);
+  const displayName = catalog?.name ?? product.name;
+  const displayTagline = catalog?.tagline ?? product.tagline;
+  const displayBadge = catalog?.badge ?? product.badge;
 
   return (
     <article
@@ -27,9 +41,9 @@ function ProductCard({ productId }: { productId: ProductId }) {
         product.variant === "black" && "border-neutral-800/20",
       )}
     >
-      {product.badge ? (
+      {displayBadge ? (
         <span className="absolute right-4 top-4 z-10 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-2.5 py-0.5 text-[10px] font-semibold text-white shadow-soft">
-          {product.badge}
+          {displayBadge}
         </span>
       ) : null}
 
@@ -43,19 +57,20 @@ function ProductCard({ productId }: { productId: ProductId }) {
       </div>
 
       <div className="flex flex-1 flex-col p-6 pt-5">
-        <h3 className="font-display text-xl font-semibold tracking-tight">{product.name}</h3>
-        <p className="mt-1 text-sm text-muted-foreground">{product.tagline}</p>
+        <h3 className="font-display text-xl font-semibold tracking-tight">{displayName}</h3>
+        <p className="mt-1 text-sm text-muted-foreground">{displayTagline}</p>
 
         <div className="mt-4 flex items-baseline gap-1.5">
           <span className="font-display text-2xl font-semibold">{formatArs(monthly)}</span>
           <span className="text-sm text-muted-foreground">/ mes</span>
         </div>
         <p className="mt-1 text-[12px] text-muted-foreground">
-          Facturación anual · <span className="font-medium text-foreground">{formatArs(annual)}</span> por tarjeta
+          Facturación anual ·{" "}
+          <span className="font-medium text-foreground">{formatArs(annual)}</span> por tarjeta
         </p>
 
         <ul className="mt-5 space-y-2">
-          {product.features.map((f) => (
+          {(catalog?.features?.length ? catalog.features : product.features).map((f) => (
             <li key={f} className="flex items-start gap-2 text-[13px] text-muted-foreground">
               <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-600" />
               {f}
@@ -85,7 +100,15 @@ function ProductCard({ productId }: { productId: ProductId }) {
   );
 }
 
-export function ProductSection() {
+export function ProductSection({
+  catalogProducts = [],
+}: {
+  catalogProducts?: CatalogProduct[];
+}) {
+  const bySlug = Object.fromEntries(catalogProducts.map((p) => [p.slug, p])) as Partial<
+    Record<ProductId, CatalogProduct>
+  >;
+
   return (
     <section id="tarjetas" className="scroll-mt-20">
       <div className="mx-auto mb-10 max-w-2xl text-center">
@@ -100,7 +123,7 @@ export function ProductSection() {
 
       <div className="grid gap-5 md:grid-cols-2">
         {STORE_PRODUCTS.map((p) => (
-          <ProductCard key={p.id} productId={p.id} />
+          <ProductCard key={p.id} productId={p.id} catalog={bySlug[p.id]} />
         ))}
       </div>
     </section>
