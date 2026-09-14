@@ -12,6 +12,7 @@ import {
   Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { trackMetaPurchase } from "@/lib/meta-pixel";
 
 function cleanParam(value: string | null): string | null {
   if (!value || value === "null" || value === "undefined") return null;
@@ -42,6 +43,8 @@ function SuccessContent() {
   const [orderInfo, setOrderInfo] = useState<{
     orderNumber: string;
     profileId: string | null;
+    total?: number;
+    currency?: string;
   } | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [redirectIn, setRedirectIn] = useState<number | null>(null);
@@ -88,6 +91,8 @@ function SuccessContent() {
             setOrderInfo({
               orderNumber: confirmed.orderNumber,
               profileId: confirmed.profileId,
+              total: typeof confirmed.total === "number" ? confirmed.total : Number(confirmed.total),
+              currency: confirmed.currency || "ARS",
             });
             if (intervalId) clearInterval(intervalId);
             setRedirectIn(3);
@@ -115,7 +120,9 @@ function SuccessContent() {
           setStatus("approved");
           setOrderInfo({
             orderNumber: data.orderNumber,
-            profileId: data.profileId,
+            profileId: data.profileId ?? null,
+            total: typeof data.total === "number" ? data.total : Number(data.total),
+            currency: data.currency || "ARS",
           });
           if (intervalId) clearInterval(intervalId);
           setRedirectIn(3);
@@ -137,6 +144,19 @@ function SuccessContent() {
       if (intervalId) clearInterval(intervalId);
     };
   }, [orderId, paymentId, mpStatus]);
+
+  // Meta Purchase: only once, only when payment is confirmed APPROVED
+  useEffect(() => {
+    if (status !== "approved" || !orderId || !orderInfo) return;
+    const value = Number(orderInfo.total);
+    if (!Number.isFinite(value)) return;
+    trackMetaPurchase({
+      orderId,
+      value,
+      currency: orderInfo.currency || "ARS",
+      orderNumber: orderInfo.orderNumber,
+    });
+  }, [status, orderId, orderInfo]);
 
   const onboardingPath =
     orderId && accessToken

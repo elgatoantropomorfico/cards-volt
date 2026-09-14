@@ -50,6 +50,8 @@ export async function POST(
         paymentStatus: true,
         profileId: true,
         accessToken: true,
+        total: true,
+        currency: true,
         profile: {
           select: { id: true, slug: true, publicId: true, profileStatus: true },
         },
@@ -89,6 +91,8 @@ export async function POST(
         orderNumber: true,
         paymentStatus: true,
         profileId: true,
+        total: true,
+        currency: true,
         profile: {
           select: { id: true, slug: true, publicId: true, profileStatus: true },
         },
@@ -107,6 +111,8 @@ export async function POST(
       paymentStatus: refreshed?.paymentStatus,
       profileId: refreshed?.profileId,
       profile: refreshed?.profile,
+      total: refreshed ? Number(refreshed.total) : undefined,
+      currency: refreshed?.currency || "ARS",
       accessToken,
       onboardingUrl: accessToken
         ? `/onboarding/${orderId}?t=${encodeURIComponent(accessToken)}`

@@ -14,11 +14,11 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://connect.facebook.net",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https:",
+      "img-src 'self' data: blob: https: https://www.facebook.com",
       "font-src 'self' data:",
-      "connect-src 'self' https:",
+      "connect-src 'self' https: https://www.facebook.com https://connect.facebook.net",
       // MapEmbed uses Google Maps iframe embeds on public profiles
       "frame-src 'self' https://www.google.com https://maps.google.com https://www.google.com/maps/",
       "child-src 'self' https://www.google.com https://maps.google.com",

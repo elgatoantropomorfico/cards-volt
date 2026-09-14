@@ -3,6 +3,7 @@ import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { CartProvider } from "@/components/marketing/store/CartContext";
+import { MetaPixel } from "@/components/analytics/MetaPixel";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preload" as="image" href="/cards/front-white.png" />
       </head>
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
+        <MetaPixel />
         <CartProvider>
           {children}
           <Toaster />

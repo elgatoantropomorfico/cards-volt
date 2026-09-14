@@ -32,6 +32,8 @@ export async function GET(
       paymentStatus: true,
       profileId: true,
       accessToken: true,
+      total: true,
+      currency: true,
       profile: {
         select: {
           id: true,
@@ -51,10 +53,18 @@ export async function GET(
   const access = await assertOrderAccess(orderId, token);
   if (!access.ok) {
     // Minimal public poll for checkout success (no PII / no wizard token)
+    // Include total only when APPROVED so Meta Purchase can fire on success page
     return NextResponse.json(
       {
         id: order.id,
         paymentStatus: order.paymentStatus,
+        ...(order.paymentStatus === "APPROVED"
+          ? {
+              orderNumber: order.orderNumber,
+              total: Number(order.total),
+              currency: order.currency || "ARS",
+            }
+          : {}),
       },
       { headers: { "Cache-Control": "no-store, max-age=0" } },
     );
@@ -69,6 +79,8 @@ export async function GET(
       paymentStatus: order.paymentStatus,
       profileId: order.profileId,
       profile: order.profile,
+      total: Number(order.total),
+      currency: order.currency || "ARS",
       accessToken,
       onboardingUrl: `/onboarding/${order.id}?t=${encodeURIComponent(accessToken)}`,
     },
