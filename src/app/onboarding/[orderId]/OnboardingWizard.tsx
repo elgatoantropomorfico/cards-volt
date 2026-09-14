@@ -98,7 +98,12 @@ export function OnboardingWizard({
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [finishing, setFinishing] = useState(false);
-  const [finished, setFinished] = useState(initialProfile.profileStatus === "READY");
+  // Truth is ORDER fulfillment — not another profile's READY status
+  const [finished, setFinished] = useState(
+    ["READY_FOR_PRODUCTION", "IN_PRODUCTION", "READY_TO_SHIP", "FULFILLED"].includes(
+      order.fulfillmentStatus,
+    ),
+  );
   const [passwordReady, setPasswordReady] = useState(!needsPassword);
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");

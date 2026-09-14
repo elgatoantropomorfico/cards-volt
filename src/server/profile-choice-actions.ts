@@ -30,6 +30,9 @@ export async function associateOrderToExistingProfile(input: {
       where: { id: input.orderId },
       data: {
         profileId: profile.id,
+        // Associating to an existing ready profile completes THIS purchase's config
+        fulfillmentStatus:
+          profile.profileStatus === "READY" ? "READY_FOR_PRODUCTION" : "AWAITING_PROFILE",
         events: {
           create: {
             type: "profile.associated",

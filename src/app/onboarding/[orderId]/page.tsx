@@ -7,6 +7,55 @@ import { assertOrderAccess } from "@/server/order-access";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Detects orders auto-linked (pre multi-profile fix) to an already-READY profile
+ * without an explicit "profile.associated" choice. Order truth stays AWAITING_PROFILE
+ * until wizard finalize OR explicit associate — so READY+AWAITING is always accidental.
+ */
+async function unlinkAccidentalReadyProfile(order: {
+  id: string;
+  profileId: string | null;
+  fulfillmentStatus: string;
+  userId: string | null;
+  profile: {
+    id: string;
+    profileStatus: string;
+  } | null;
+}) {
+  if (!order.profileId || !order.profile || !order.userId) return false;
+  if (order.fulfillmentStatus !== "AWAITING_PROFILE") return false;
+  if (order.profile.profileStatus !== "READY") return false;
+
+  const associated = await prisma.orderEvent.findFirst({
+    where: { orderId: order.id, type: "profile.associated" },
+    select: { id: true },
+  });
+  if (associated) return false;
+
+  await prisma.$transaction([
+    prisma.order.update({
+      where: { id: order.id },
+      data: {
+        profileId: null,
+        events: {
+          create: {
+            type: "profile.unlink_accidental",
+            title: "Vínculo automático corregido",
+            detail:
+              "Se desvinculó un perfil ya listo de una compra previa. El comprador debe elegir asociar o crear uno nuevo.",
+          },
+        },
+      },
+    }),
+    prisma.orderSeat.updateMany({
+      where: { orderId: order.id, status: "PRIMARY" },
+      data: { profileId: null },
+    }),
+  ]);
+
+  return true;
+}
+
 export default async function OnboardingPage({
   params,
   searchParams,
@@ -22,7 +71,7 @@ export default async function OnboardingPage({
     notFound();
   }
 
-  const order = await prisma.order.findUnique({
+  let order = await prisma.order.findUnique({
     where: { id: orderId },
     include: {
       profile: {
@@ -35,6 +84,21 @@ export default async function OnboardingPage({
 
   if (!order) {
     notFound();
+  }
+
+  const didUnlink = await unlinkAccidentalReadyProfile(order);
+  if (didUnlink) {
+    order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        profile: {
+          include: {
+            links: { orderBy: { order: "asc" } },
+          },
+        },
+      },
+    });
+    if (!order) notFound();
   }
 
   // Existing account with profiles but this order not linked yet → choice UI
