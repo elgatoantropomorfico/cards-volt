@@ -40,9 +40,11 @@ const ProfileSchema = z.object({
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
-async function loadOwnedProfile() {
+async function loadOwnedProfile(preferredId?: string | null) {
   const user = await requireUser();
-  if (!user.profile) {
+  const profiles = user.profiles || [];
+
+  if (profiles.length === 0) {
     const slug = await generateUniqueSlug(user.name || user.email.split("@")[0]);
     const profile = await prisma.profile.create({
       data: {
@@ -53,18 +55,22 @@ async function loadOwnedProfile() {
         email: user.email,
       },
     });
-    return { user, profile };
+    return { user, profile, profiles: [profile] };
   }
-  // Ensure profile has a publicId if created prior to this migration
-  if (!user.profile.publicId) {
+
+  const { resolveActiveProfileId } = await import("@/lib/session");
+  const activeId = await resolveActiveProfileId(user.id, profiles, preferredId);
+  let profile = profiles.find((p) => p.id === activeId) || profiles[0];
+
+  if (!profile.publicId) {
     const publicId = generatePublicId();
-    const updated = await prisma.profile.update({
-      where: { id: user.profile.id },
+    profile = await prisma.profile.update({
+      where: { id: profile.id },
       data: { publicId },
     });
-    return { user, profile: updated };
   }
-  return { user, profile: user.profile };
+
+  return { user, profile, profiles };
 }
 
 async function generateUniqueSlug(seed: string): Promise<string> {
@@ -79,8 +85,28 @@ async function generateUniqueSlug(seed: string): Promise<string> {
   return candidate;
 }
 
-export async function ensureProfile() {
-  return loadOwnedProfile();
+export async function ensureProfile(preferredId?: string | null) {
+  return loadOwnedProfile(preferredId);
+}
+
+export async function switchActiveProfile(profileId: string): Promise<ActionResult> {
+  const user = await requireUser();
+  const owned = user.profiles.some((p) => p.id === profileId);
+  if (!owned) return { ok: false, error: "Perfil no encontrado" };
+
+  const { cookies } = await import("next/headers");
+  const { ACTIVE_PROFILE_COOKIE } = await import("@/lib/session");
+  const jar = await cookies();
+  jar.set(ACTIVE_PROFILE_COOKIE, profileId, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+
+  revalidatePath("/dashboard");
+  return { ok: true };
 }
 
 function nv(v: string | null | undefined) {
@@ -245,15 +271,26 @@ function cardToView(card: {
   };
 }
 
-export async function getMyNfcCard() {
+export async function getMyNfcCards() {
   const { profile } = await loadOwnedProfile();
-  const card = await prisma.nfcCard.findUnique({ where: { profileId: profile.id } });
-  return { ok: true as const, card: card ? cardToView(card) : null };
+  const cards = await prisma.nfcCard.findMany({
+    where: { profileId: profile.id },
+    orderBy: { assignedAt: "desc" },
+  });
+  return { ok: true as const, cards: cards.map(cardToView) };
 }
 
-export async function markMyCardLost(): Promise<ActionResult> {
+/** @deprecated use getMyNfcCards — kept for compatibility */
+export async function getMyNfcCard() {
+  const res = await getMyNfcCards();
+  return { ok: true as const, card: res.cards[0] ?? null };
+}
+
+export async function markMyCardLost(cardId?: string): Promise<ActionResult> {
   const { profile } = await loadOwnedProfile();
-  const card = await prisma.nfcCard.findUnique({ where: { profileId: profile.id } });
+  const card = cardId
+    ? await prisma.nfcCard.findFirst({ where: { id: cardId, profileId: profile.id } })
+    : await prisma.nfcCard.findFirst({ where: { profileId: profile.id }, orderBy: { assignedAt: "desc" } });
   if (!card) return { ok: false, error: "No tenés una tarjeta NFC vinculada" };
   if (card.status === "LOST") return { ok: true };
   await prisma.nfcCard.update({ where: { id: card.id }, data: { status: "LOST" } });
@@ -262,9 +299,11 @@ export async function markMyCardLost(): Promise<ActionResult> {
   return { ok: true };
 }
 
-export async function unlinkMyCard(): Promise<ActionResult> {
+export async function unlinkMyCard(cardId?: string): Promise<ActionResult> {
   const { profile } = await loadOwnedProfile();
-  const card = await prisma.nfcCard.findUnique({ where: { profileId: profile.id } });
+  const card = cardId
+    ? await prisma.nfcCard.findFirst({ where: { id: cardId, profileId: profile.id } })
+    : await prisma.nfcCard.findFirst({ where: { profileId: profile.id }, orderBy: { assignedAt: "desc" } });
   if (!card) return { ok: false, error: "No tenés una tarjeta NFC vinculada" };
   await prisma.nfcCard.update({
     where: { id: card.id },

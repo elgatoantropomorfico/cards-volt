@@ -16,7 +16,7 @@ model User {
   emailVerified Boolean  @default(false)
   image         String?
   role          Role     @default(USER)
-  profile       Profile?
+  profiles      Profile[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -142,7 +142,7 @@ model Profile {
   slug         String   @unique
   active       Boolean  @default(true)
 
-  userId       String   @unique
+  userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Ecommerce linkage & Lifecycle
@@ -183,13 +183,14 @@ model Profile {
   showSaveContact    Boolean   @default(true)
 
   links        Link[]
-  card         NfcCard?
+  cards        NfcCard[]
   orders       Order[]
   seats        OrderSeat[]
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  @@index([userId])
   @@index([source])
   @@index([profileStatus])
   @@map("profiles")
@@ -223,12 +224,13 @@ model NfcCard {
   id           String     @id @default(cuid())
   code         String     @unique
   status       CardStatus @default(UNASSIGNED)
-  profileId    String?    @unique
+  profileId    String?
   profile      Profile?   @relation(fields: [profileId], references: [id], onDelete: SetNull)
   assignedAt   DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
+  @@index([profileId])
   @@map("nfc_cards")
 }
 

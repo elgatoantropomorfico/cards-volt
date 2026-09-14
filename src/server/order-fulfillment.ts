@@ -1,19 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { generatePublicId } from "@/lib/id";
-import { normalizeSlug } from "@/lib/utils";
 
 /**
  * Handles approved order idempotently:
  * 1. Confirms Order (paidAt, paymentStatus = APPROVED)
  * 2. Deducts Stock & logs InventoryMovement
  * 3. Creates or links existing User
- * 4. Automatically creates new Profile with:
- *    - source = ECOMMERCE
- *    - sourceOrderId = order.id
- *    - sourceOrderNumber = order.orderNumber
- *    - profileStatus = PENDING_CONFIGURATION
- *    - onboardingStatus = NOT_STARTED
- *    - publicId = generatePublicId()
+ * 4. Creates Profile for new accounts, or defers choice if account already has profiles
  * 5. Logs timeline events
  */
 export async function handleApprovedOrder({
@@ -114,11 +107,10 @@ export async function handleApprovedOrder({
   // 3. User association or creation
   let user = await prisma.user.findUnique({
     where: { email: order.email },
-    include: { profile: true },
+    include: { profiles: { select: { id: true }, take: 5 } },
   });
 
   if (!user) {
-    // Generate secure internal user ID for Better Auth compatibility
     const newUserId = generatePublicId() + generatePublicId();
     user = await prisma.user.create({
       data: {
@@ -128,67 +120,40 @@ export async function handleApprovedOrder({
         emailVerified: true,
         role: "USER",
       },
-      include: { profile: true },
+      include: { profiles: { select: { id: true }, take: 5 } },
     });
   }
 
-  // 4. Automatic Profile Creation
-  // Rule: A purchase automatically creates a Profile linked to the order!
+  // 4. Profile strategy:
+  // - New account → create profile immediately
+  // - Existing account with profiles → leave profileId null so onboarding asks
+  //   "asociar a perfil existente" vs "configurar uno nuevo" (avoids crash / overwrite)
   let profile = order.profile;
+  let needsProfileChoice = false;
 
   if (!profile) {
-    // If the user doesn't have a profile or this is a new purchase:
-    let baseSlug = normalizeSlug(order.customerName) || "user";
-    if (baseSlug.length < 3) baseSlug = `${baseSlug}-card`;
-    let candidateSlug = baseSlug;
-    let i = 1;
-
-    while (await prisma.profile.findUnique({ where: { slug: candidateSlug }, select: { id: true } })) {
-      i += 1;
-      candidateSlug = `${baseSlug}-${i}`;
-    }
-
-    // Check if user already has a profile (since 1 user currently has 1 profile relation in schema)
-    const existingUserProfile = await prisma.profile.findUnique({
-      where: { userId: user.id },
-    });
-
-    if (existingUserProfile) {
-      // User exists and already has a profile: Link order to this profile and mark it
-      profile = await prisma.profile.update({
-        where: { id: existingUserProfile.id },
-        data: {
-          sourceOrderId: order.id,
-          sourceOrderNumber: order.orderNumber,
-        },
-      });
+    const existingCount = await prisma.profile.count({ where: { userId: user.id } });
+    if (existingCount > 0) {
+      needsProfileChoice = true;
     } else {
-      // Create new profile for this user
-      profile = await prisma.profile.create({
-        data: {
-          userId: user.id,
-          publicId: generatePublicId(),
-          slug: candidateSlug,
-          fullName: order.customerName,
-          email: order.email,
-          phone: order.phone,
-          source: "ECOMMERCE",
-          sourceOrderId: order.id,
-          sourceOrderNumber: order.orderNumber,
-          profileStatus: "PENDING_CONFIGURATION",
-          onboardingStatus: "NOT_STARTED",
-          onboardingStep: 1,
-        },
+      const { createEcommerceProfile } = await import("@/server/create-ecommerce-profile");
+      profile = await createEcommerceProfile({
+        userId: user.id,
+        fullName: order.customerName,
+        email: order.email,
+        phone: order.phone,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
       });
     }
   }
 
-  // 5. Update Order to APPROVED and link User & Profile
+  // 5. Update Order to APPROVED and link User (& Profile if ready)
   const updatedOrder = await prisma.order.update({
     where: { id: order.id },
     data: {
       userId: user.id,
-      profileId: profile.id,
+      profileId: profile?.id ?? null,
       paymentStatus: "APPROVED",
       paidAt: now,
       fulfillmentStatus: "AWAITING_PROFILE",
@@ -199,11 +164,18 @@ export async function handleApprovedOrder({
             title: "Pago confirmado",
             detail: `Pago aprobado por Mercado Pago (Referencia: ${paymentId || "Direct"})`,
           },
-          {
-            type: "profile.created",
-            title: "Perfil digital creado",
-            detail: `Perfil principal creado con slug provisional /${profile.slug} (wizard del comprador)`,
-          },
+          profile
+            ? {
+                type: "profile.created",
+                title: "Perfil digital creado",
+                detail: `Perfil principal creado con slug provisional /${profile.slug} (wizard del comprador)`,
+              }
+            : {
+                type: "profile.choice_required",
+                title: "Elegir perfil para la compra",
+                detail:
+                  "La cuenta ya tenía perfiles. El comprador debe asociar esta tarjeta a uno existente o crear uno nuevo.",
+              },
         ],
       },
     },
@@ -230,7 +202,7 @@ export async function handleApprovedOrder({
           productId: item.productId,
           seatIndex,
           status: isPrimary ? "PRIMARY" : "PENDING_ASSIGNMENT",
-          profileId: isPrimary ? profile.id : null,
+          profileId: isPrimary && profile ? profile.id : null,
         });
         seatIndex += 1;
       }
@@ -268,5 +240,10 @@ export async function handleApprovedOrder({
     console.error("[fulfillment] purchase email failed", err);
   }
 
-  return { ok: true, order: updatedOrder, alreadyProcessed: false };
+  return {
+    ok: true,
+    order: updatedOrder,
+    alreadyProcessed: false,
+    needsProfileChoice,
+  };
 }

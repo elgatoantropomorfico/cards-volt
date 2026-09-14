@@ -143,10 +143,12 @@ export async function deleteUser(userId: string): Promise<ActionResult> {
 async function loadUserForAdmin(userId: string) {
   const target = await prisma.user.findUnique({
     where: { id: userId },
-    include: { profile: true },
+    include: { profiles: { orderBy: { updatedAt: "desc" } } },
   });
   if (!target) return { ok: false as const, error: "Usuario no encontrado" };
-  return { ok: true as const, target };
+  // Admin UI still edits "primary" profile = most recently updated
+  const profile = target.profiles[0] ?? null;
+  return { ok: true as const, target: { ...target, profile } };
 }
 
 export async function getUserAdminDetail(userId: string) {
@@ -389,7 +391,7 @@ export async function assignCard(cardId: string, profileId: string | null): Prom
   if (profileId) {
     const profile = await prisma.profile.findUnique({ where: { id: profileId } });
     if (!profile) return { ok: false, error: "Perfil inexistente" };
-    await prisma.nfcCard.updateMany({ where: { profileId }, data: { profileId: null, status: "UNASSIGNED", assignedAt: null } });
+    // Multi-card: do NOT unassign other cards on the same profile
     await prisma.nfcCard.update({
       where: { id: cardId },
       data: { profileId, status: "ACTIVE", assignedAt: new Date() },

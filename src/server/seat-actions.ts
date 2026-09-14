@@ -4,8 +4,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { generatePublicId } from "@/lib/id";
-import { normalizeSlug } from "@/lib/utils";
 
 const AssignSeatSchema = z.object({
   orderId: z.string(),
@@ -53,7 +51,7 @@ export async function assignOrderSeat(input: z.infer<typeof AssignSeatSchema>) {
   // Reuse existing user by email if present
   let user = await prisma.user.findUnique({
     where: { email: emailNorm },
-    include: { profile: true },
+    include: { profiles: { take: 1 } },
   });
 
   let tempPassword: string | null = null;
@@ -68,7 +66,7 @@ export async function assignOrderSeat(input: z.infer<typeof AssignSeatSchema>) {
       if (!userId) throw new Error("No se pudo crear el usuario");
       user = await prisma.user.findUnique({
         where: { id: userId },
-        include: { profile: true },
+        include: { profiles: { take: 1 } },
       });
     } catch (err: any) {
       return { ok: false as const, error: err?.message || "Error creando usuario" };
@@ -77,33 +75,15 @@ export async function assignOrderSeat(input: z.infer<typeof AssignSeatSchema>) {
 
   if (!user) return { ok: false as const, error: "No se pudo resolver el usuario" };
 
-  let profile = user.profile;
-  if (!profile) {
-    let baseSlug = normalizeSlug(name) || normalizeSlug(emailNorm.split("@")[0]) || "card";
-    if (baseSlug.length < 3) baseSlug = `${baseSlug}-card`;
-    let candidate = baseSlug;
-    let i = 1;
-    while (await prisma.profile.findUnique({ where: { slug: candidate }, select: { id: true } })) {
-      i += 1;
-      candidate = `${baseSlug}-${i}`;
-    }
-
-    profile = await prisma.profile.create({
-      data: {
-        userId: user.id,
-        publicId: generatePublicId(),
-        slug: candidate,
-        fullName: name.trim(),
-        email: emailNorm,
-        source: "ECOMMERCE",
-        sourceOrderId: orderId,
-        sourceOrderNumber: access.order.orderNumber,
-        profileStatus: "PENDING_CONFIGURATION",
-        onboardingStatus: "NOT_STARTED",
-        onboardingStep: 1,
-      },
-    });
-  }
+  // Always create a dedicated profile for this seat (multi-profile accounts)
+  const { createEcommerceProfile } = await import("@/server/create-ecommerce-profile");
+  const profile = await createEcommerceProfile({
+    userId: user.id,
+    fullName: name.trim(),
+    email: emailNorm,
+    orderId,
+    orderNumber: access.order.orderNumber,
+  });
 
   await prisma.orderSeat.update({
     where: { id: seatId },
@@ -133,7 +113,7 @@ export async function assignOrderSeat(input: z.infer<typeof AssignSeatSchema>) {
     profileId: profile.id,
     slug: profile.slug,
     email: emailNorm,
-    tempPassword, // only returned when we just created the account
+    tempPassword,
   };
 }
 

@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { CopyButton } from "../CopyButton";
 import { toast } from "@/components/ui/toaster";
-import { getMyNfcCard, markMyCardLost, unlinkMyCard } from "@/server/profile-actions";
+import { getMyNfcCards, markMyCardLost, unlinkMyCard } from "@/server/profile-actions";
 import type { NfcCardView, ProfileView } from "@/lib/profile-types";
 
 const STATUS_LABEL: Record<NfcCardView["status"], string> = {
@@ -29,57 +29,59 @@ export function CardSection({
   profile,
   appBaseUrl,
   nfcCard: initialCard,
+  nfcCards: initialCards,
   onCardChange,
 }: {
   profile: ProfileView;
   appBaseUrl: string;
   nfcCard: NfcCardView | null;
+  nfcCards?: NfcCardView[];
   onCardChange?: (card: NfcCardView | null) => void;
 }) {
-  const [nfcCard, setNfcCard] = React.useState(initialCard);
+  const [nfcCards, setNfcCards] = React.useState<NfcCardView[]>(
+    initialCards?.length ? initialCards : initialCard ? [initialCard] : [],
+  );
   const [loadingCard, setLoadingCard] = React.useState(false);
-  const [pending, setPending] = React.useState<"lost" | "unlink" | null>(null);
+  const [pending, setPending] = React.useState<string | null>(null);
 
-  React.useEffect(() => setNfcCard(initialCard), [initialCard]);
+  React.useEffect(() => {
+    setNfcCards(initialCards?.length ? initialCards : initialCard ? [initialCard] : []);
+  }, [initialCards, initialCard]);
 
   React.useEffect(() => {
     let cancelled = false;
     setLoadingCard(true);
-    void getMyNfcCard().then((res) => {
+    void getMyNfcCards().then((res) => {
       if (cancelled) return;
-      setNfcCard(res.card);
-      onCardChange?.(res.card);
+      setNfcCards(res.cards);
+      onCardChange?.(res.cards[0] ?? null);
     }).finally(() => {
       if (!cancelled) setLoadingCard(false);
     });
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function patch(card: NfcCardView | null) {
-    setNfcCard(card);
-    onCardChange?.(card);
-  }
-
-  async function onMarkLost() {
-    if (!nfcCard || nfcCard.status === "LOST") return;
-    if (!confirm("¿Marcar esta tarjeta NFC como perdida? Podés desvincularla después si la recuperás.")) return;
-    setPending("lost");
-    const res = await markMyCardLost();
+  async function onMarkLost(cardId: string) {
+    if (!confirm("¿Marcar esta tarjeta NFC como perdida?")) return;
+    setPending(`lost:${cardId}`);
+    const res = await markMyCardLost(cardId);
     setPending(null);
     if (!res.ok) return toast({ title: "Error", description: res.error, variant: "error" });
-    patch({ ...nfcCard, status: "LOST" });
+    setNfcCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, status: "LOST" } : c)));
     toast({ title: "Tarjeta marcada como perdida", variant: "success" });
   }
 
-  async function onUnlink() {
-    if (!nfcCard) return;
-    if (!confirm("¿Desvincular tu tarjeta NFC? Se liberará el código y dejará de estar asociada a tu perfil.")) return;
-    setPending("unlink");
-    const res = await unlinkMyCard();
+  async function onUnlink(cardId: string) {
+    if (!confirm("¿Desvincular esta tarjeta NFC?")) return;
+    setPending(`unlink:${cardId}`);
+    const res = await unlinkMyCard(cardId);
     setPending(null);
     if (!res.ok) return toast({ title: "Error", description: res.error, variant: "error" });
-    patch(null);
+    setNfcCards((prev) => prev.filter((c) => c.id !== cardId));
+    onCardChange?.(null);
     toast({ title: "Tarjeta desvinculada", variant: "success" });
   }
 
@@ -123,67 +125,85 @@ export function CardSection({
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Nfc className="h-4 w-4" /> Tarjeta física NFC
+            <Nfc className="h-4 w-4" /> Tarjetas físicas NFC
           </CardTitle>
           <CardDescription>
-            {nfcCard
-              ? "Esta es la tarjeta vinculada a tu perfil por el administrador."
-              : "Cuando te asignen una tarjeta física, aparecerá acá con su código."}
+            {nfcCards.length > 1
+              ? `Tenés ${nfcCards.length} tarjetas vinculadas a este perfil.`
+              : nfcCards.length === 1
+                ? "Tarjeta vinculada a tu perfil."
+                : "Cuando te asignen una tarjeta física, aparecerá acá."}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          {loadingCard && !nfcCard ? (
+        <CardContent className="space-y-4">
+          {loadingCard && nfcCards.length === 0 ? (
             <div className="grid place-items-center py-8 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
             </div>
-          ) : nfcCard ? (
-            <div className="space-y-4">
-              <div className="rounded-2xl border bg-secondary/40 p-4">
-                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Código interno</p>
-                <p className="font-display mt-1 break-all text-2xl font-semibold tracking-tight">{nfcCard.code}</p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <Badge variant={STATUS_VARIANT[nfcCard.status]}>{STATUS_LABEL[nfcCard.status]}</Badge>
-                  {nfcCard.assignedAt && (
-                    <span className="text-xs text-muted-foreground">
-                      Vinculada el {new Date(nfcCard.assignedAt).toLocaleDateString()}
-                    </span>
-                  )}
+          ) : nfcCards.length > 0 ? (
+            nfcCards.map((nfcCard) => (
+              <div key={nfcCard.id} className="space-y-3 rounded-2xl border bg-secondary/40 p-4">
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    Código interno
+                  </p>
+                  <p className="font-display mt-1 break-all text-xl font-semibold tracking-tight">
+                    {nfcCard.code}
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Badge variant={STATUS_VARIANT[nfcCard.status]}>
+                      {STATUS_LABEL[nfcCard.status]}
+                    </Badge>
+                    {nfcCard.assignedAt && (
+                      <span className="text-xs text-muted-foreground">
+                        Vinculada el {new Date(nfcCard.assignedAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {nfcCard.status === "LOST" && (
+                  <div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <p>Marcada como perdida.</p>
+                  </div>
+                )}
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button
+                    variant="outline"
+                    disabled={pending !== null || nfcCard.status === "LOST"}
+                    onClick={() => onMarkLost(nfcCard.id)}
+                    className="w-full"
+                  >
+                    {pending === `lost:${nfcCard.id}` ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4" />
+                    )}
+                    Marcar perdida
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    disabled={pending !== null}
+                    onClick={() => onUnlink(nfcCard.id)}
+                    className="w-full text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                  >
+                    {pending === `unlink:${nfcCard.id}` ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Unlink className="h-4 w-4" />
+                    )}
+                    Desvincular
+                  </Button>
                 </div>
               </div>
-
-              {nfcCard.status === "LOST" && (
-                <div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <p>Esta tarjeta está marcada como perdida. Contactá al admin si necesitás una nueva.</p>
-                </div>
-              )}
-
-              <div className="grid gap-2 sm:grid-cols-2">
-                <Button
-                  variant="outline"
-                  disabled={pending !== null || nfcCard.status === "LOST"}
-                  onClick={onMarkLost}
-                  className="w-full"
-                >
-                  {pending === "lost" ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />}
-                  Marcar como perdida
-                </Button>
-                <Button
-                  variant="ghost"
-                  disabled={pending !== null}
-                  onClick={onUnlink}
-                  className="w-full text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                >
-                  {pending === "unlink" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Unlink className="h-4 w-4" />}
-                  Desvincular tarjeta
-                </Button>
-              </div>
-            </div>
+            ))
           ) : (
             <div className="rounded-2xl border border-dashed bg-secondary/20 px-4 py-8 text-center text-sm text-muted-foreground">
               <Nfc className="mx-auto mb-2 h-8 w-8 opacity-40" />
               <p className="font-medium text-foreground">Sin tarjeta vinculada</p>
-              <p className="mt-1">Pedile al administrador que te asigne una tarjeta NFC desde el panel.</p>
+              <p className="mt-1">
+                Pedile al administrador que te asigne una tarjeta NFC desde el panel.
+              </p>
             </div>
           )}
         </CardContent>

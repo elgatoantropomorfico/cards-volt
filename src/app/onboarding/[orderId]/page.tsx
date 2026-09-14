@@ -2,10 +2,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { profileToView } from "@/server/profile-shape";
 import { OnboardingWizard } from "./OnboardingWizard";
-import {
-  assertOrderAccess,
-  setOrderAccessCookie,
-} from "@/server/order-access";
+import { ProfileChoiceClient } from "./ProfileChoiceClient";
+import { assertOrderAccess } from "@/server/order-access";
 
 export const dynamic = "force-dynamic";
 
@@ -20,15 +18,7 @@ export default async function OnboardingPage({
   const { t } = await searchParams;
 
   const access = await assertOrderAccess(orderId, t || null);
-  if (!access.ok) {
-    notFound();
-  }
-
-  if (access.via === "token" || t) {
-    await setOrderAccessCookie(orderId, access.order.accessToken);
-  }
-
-  if (access.order.paymentStatus !== "APPROVED") {
+  if (!access.ok || access.order.paymentStatus !== "APPROVED") {
     notFound();
   }
 
@@ -43,7 +33,38 @@ export default async function OnboardingPage({
     },
   });
 
-  if (!order || !order.profile) {
+  if (!order) {
+    notFound();
+  }
+
+  // Existing account with profiles but this order not linked yet → choice UI
+  if (!order.profileId && order.userId) {
+    const existingProfiles = await prisma.profile.findMany({
+      where: { userId: order.userId },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        slug: true,
+        fullName: true,
+        profileStatus: true,
+      },
+    });
+
+    if (existingProfiles.length > 0) {
+      return (
+        <ProfileChoiceClient
+          orderId={order.id}
+          orderNumber={order.orderNumber}
+          accessToken={access.order.accessToken}
+          profiles={existingProfiles}
+        />
+      );
+    }
+
+    notFound();
+  }
+
+  if (!order.profile) {
     notFound();
   }
 

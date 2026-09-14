@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,7 @@ import { LinksSection } from "./sections/LinksSection";
 import { CardSection } from "./sections/CardSection";
 import type { NfcCardView, ProfileLink, ProfileView } from "@/lib/profile-types";
 import { cn } from "@/lib/utils";
+import { switchActiveProfile } from "@/server/profile-actions";
 
 type Section = "profile" | "appearance" | "links" | "card";
 
@@ -38,15 +40,19 @@ const NAV: { id: Section; label: string; icon: React.ReactNode }[] = [
 export function DashboardShell({
   user,
   profile: initialProfile,
+  profiles,
   links: initialLinks,
   nfcCard: initialNfcCard,
+  nfcCards: initialNfcCards,
   appHost,
   appBaseUrl,
 }: {
   user: { email: string; name: string; role: "SUPERADMIN" | "USER" };
   profile: ProfileView;
+  profiles: { id: string; slug: string; fullName: string }[];
   links: ProfileLink[];
   nfcCard: NfcCardView | null;
+  nfcCards?: NfcCardView[];
   appHost: string;
   appBaseUrl: string;
 }) {
@@ -59,11 +65,18 @@ export function DashboardShell({
   const [profile, setProfile] = React.useState<ProfileView>(initialProfile);
   const [links, setLinks] = React.useState<ProfileLink[]>(initialLinks);
   const [nfcCard, setNfcCard] = React.useState<NfcCardView | null>(initialNfcCard);
+  const [nfcCards, setNfcCards] = React.useState<NfcCardView[]>(
+    initialNfcCards?.length ? initialNfcCards : initialNfcCard ? [initialNfcCard] : [],
+  );
   const [showPreview, setShowPreview] = React.useState(true);
+  const [switching, setSwitching] = React.useState(false);
 
   React.useEffect(() => setProfile(initialProfile), [initialProfile]);
   React.useEffect(() => setLinks(initialLinks), [initialLinks]);
   React.useEffect(() => setNfcCard(initialNfcCard), [initialNfcCard]);
+  React.useEffect(() => {
+    setNfcCards(initialNfcCards?.length ? initialNfcCards : initialNfcCard ? [initialNfcCard] : []);
+  }, [initialNfcCards, initialNfcCard]);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -80,6 +93,17 @@ export function DashboardShell({
     setProfile((prev) => ({ ...prev, ...p }));
   }
 
+  async function onSwitchProfile(id: string) {
+    if (id === profile.id || switching) return;
+    setSwitching(true);
+    const res = await switchActiveProfile(id);
+    setSwitching(false);
+    if (res.ok) {
+      router.push(`/dashboard?profileId=${id}`);
+      router.refresh();
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur">
@@ -91,7 +115,43 @@ export function DashboardShell({
               </span>
               <span className="font-display truncate text-[15px] font-semibold tracking-tight">Volt Cards</span>
             </Link>
-            <Badge variant="outline" className="hidden shrink-0 md:inline-flex">/{profile.slug}</Badge>
+            {profiles.length > 1 ? (
+              <div className="relative hidden md:block">
+                <select
+                  value={profile.id}
+                  disabled={switching}
+                  onChange={(e) => void onSwitchProfile(e.target.value)}
+                  className="appearance-none rounded-full border bg-background pl-3 pr-7 py-1 text-xs font-mono text-foreground shadow-soft focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+                  aria-label="Cambiar perfil"
+                >
+                  {profiles.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      /{p.slug}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+              </div>
+            ) : (
+              <Badge variant="outline" className="hidden shrink-0 md:inline-flex">
+                /{profile.slug}
+              </Badge>
+            )}
+            {profiles.length > 1 && (
+              <select
+                value={profile.id}
+                disabled={switching}
+                onChange={(e) => void onSwitchProfile(e.target.value)}
+                className="md:hidden max-w-[40vw] appearance-none rounded-full border bg-background px-2 py-1 text-[11px] font-mono"
+                aria-label="Cambiar perfil"
+              >
+                {profiles.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    /{p.slug}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <div className="flex shrink-0 items-center gap-1">
             <Link href={`/${profile.slug}`} target="_blank">
@@ -200,7 +260,16 @@ export function DashboardShell({
                     profile={profile}
                     appBaseUrl={appBaseUrl}
                     nfcCard={nfcCard}
-                    onCardChange={setNfcCard}
+                    nfcCards={nfcCards}
+                    onCardChange={(c) => {
+                      setNfcCard(c);
+                      if (c) {
+                        setNfcCards((prev) => {
+                          const rest = prev.filter((x) => x.id !== c.id);
+                          return [c, ...rest];
+                        });
+                      }
+                    }}
                   />
                 )}
               </motion.div>

@@ -14,7 +14,7 @@ export default async function AdminPage() {
     await Promise.all([
       prisma.user.findMany({
         orderBy: { createdAt: "desc" },
-        include: { profile: true },
+        include: { profiles: { orderBy: { updatedAt: "desc" }, take: 1 } },
       }),
       prisma.nfcCard.findMany({
         orderBy: { createdAt: "desc" },
@@ -82,14 +82,14 @@ export default async function AdminPage() {
         name: u.name,
         email: u.email,
         role: u.role,
-        profile: u.profile
+        profile: u.profiles[0]
           ? {
-              id: u.profile.id,
-              slug: u.profile.slug,
-              active: u.profile.active,
-              source: u.profile.source,
-              sourceOrderId: u.profile.sourceOrderId,
-              sourceOrderNumber: u.profile.sourceOrderNumber,
+              id: u.profiles[0].id,
+              slug: u.profiles[0].slug,
+              active: u.profiles[0].active,
+              source: u.profiles[0].source,
+              sourceOrderId: u.profiles[0].sourceOrderId,
+              sourceOrderNumber: u.profiles[0].sourceOrderNumber,
             }
           : null,
       }))}
