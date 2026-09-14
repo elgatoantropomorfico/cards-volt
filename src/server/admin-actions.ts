@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { hashPassword } from "better-auth/crypto";
 import { auth } from "@/lib/auth";
+import { generatePublicId } from "@/lib/id";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { isValidSlug, normalizeSlug } from "@/lib/utils";
@@ -135,7 +136,14 @@ export async function deleteUser(userId: string): Promise<ActionResult> {
   const target = await prisma.user.findUnique({ where: { id: userId } });
   if (!target) return { ok: false, error: "No existe" };
   if (target.role === "SUPERADMIN") return { ok: false, error: "No podés eliminar un superadmin" };
-  await prisma.user.delete({ where: { id: userId } });
+  // Order.userId has no FK — clear it so onboarding can reprovision by email
+  await prisma.$transaction([
+    prisma.order.updateMany({
+      where: { userId },
+      data: { userId: null, profileId: null },
+    }),
+    prisma.user.delete({ where: { id: userId } }),
+  ]);
   revalidatePath("/admin");
   return { ok: true };
 }
@@ -262,10 +270,26 @@ export async function updateUserAdmin(input: z.infer<typeof AdminUserUpdateSchem
 
     if (parsed.data.newPassword) {
       const hashed = await hashPassword(parsed.data.newPassword);
-      await tx.account.updateMany({
+      const credential = await tx.account.findFirst({
         where: { userId: parsed.data.userId, providerId: "credential" },
-        data: { password: hashed },
       });
+      if (credential) {
+        await tx.account.update({
+          where: { id: credential.id },
+          data: { password: hashed, accountId: parsed.data.email },
+        });
+      } else {
+        // Ecommerce buyers often have User without credential Account
+        await tx.account.create({
+          data: {
+            id: generatePublicId() + generatePublicId(),
+            userId: parsed.data.userId,
+            accountId: parsed.data.email,
+            providerId: "credential",
+            password: hashed,
+          },
+        });
+      }
     }
   });
 

@@ -141,8 +141,60 @@ export async function updateAdminOrderStatus(input: {
     data: updateData,
   });
 
+  // Support reset: AWAITING_PROFILE with missing user/profile → recreate buyer binding
+  if (input.fulfillmentStatus === "AWAITING_PROFILE") {
+    const { repairOrderBuyerBinding } = await import("@/server/ensure-order-buyer");
+    await repairOrderBuyerBinding(input.orderId);
+  }
+
   revalidatePath("/admin");
   return { ok: true };
+}
+
+/**
+ * Hard reset of buyer onboarding for support: unlink profile, AWAITING_PROFILE,
+ * recreate User+Profile if needed, return shareable wizard URL with access token.
+ */
+export async function resetOrderOnboarding(orderId: string) {
+  await requireRole("SUPERADMIN");
+
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) return { ok: false as const, error: "Orden no encontrada" };
+  if (order.paymentStatus !== "APPROVED") {
+    return { ok: false as const, error: "El pedido no está pagado" };
+  }
+
+  await prisma.$transaction([
+    prisma.order.update({
+      where: { id: orderId },
+      data: {
+        profileId: null,
+        fulfillmentStatus: "AWAITING_PROFILE",
+        events: {
+          create: {
+            type: "onboarding.reset",
+            title: "Onboarding reiniciado",
+            detail: "Superadmin reinició el wizard del comprador para esta compra.",
+          },
+        },
+      },
+    }),
+    prisma.orderSeat.updateMany({
+      where: { orderId, status: "PRIMARY" },
+      data: { profileId: null },
+    }),
+  ]);
+
+  const { repairOrderBuyerBinding } = await import("@/server/ensure-order-buyer");
+  await repairOrderBuyerBinding(orderId);
+
+  const { ensureOrderAccessToken, onboardingPath } = await import("@/server/order-access");
+  const accessToken = await ensureOrderAccessToken(orderId);
+  const path = onboardingPath(orderId, accessToken);
+
+  revalidatePath("/admin");
+  revalidatePath(`/onboarding/${orderId}`);
+  return { ok: true as const, onboardingPath: path, accessToken };
 }
 
 /**

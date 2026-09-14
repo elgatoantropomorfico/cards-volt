@@ -38,6 +38,7 @@ import {
   updateResendApiKey,
   upsertStoreMailbox,
   setStoreMailboxActive,
+  resetOrderOnboarding,
   sendAdminTestPurchaseEmail,
 } from "@/server/admin-store-actions";
 
@@ -547,9 +548,23 @@ function OrderDetailView({
   onBack: () => void;
 }) {
   const [updating, setUpdating] = React.useState(false);
+  const [resetting, setResetting] = React.useState(false);
   const [fulfillment, setFulfillment] = React.useState(order.fulfillmentStatus);
   const [shipping, setShipping] = React.useState(order.shippingStatus);
   const [trackingNumber, setTrackingNumber] = React.useState(order.trackingNumber || "");
+
+  const wizardPath = React.useMemo(() => {
+    const token = order.accessToken as string | null | undefined;
+    return token
+      ? `/onboarding/${order.id}?t=${encodeURIComponent(token)}`
+      : `/onboarding/${order.id}`;
+  }, [order.accessToken, order.id]);
+
+  const wizardUrl = React.useMemo(() => {
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : `https://${appHost}`;
+    return `${origin}${wizardPath}`;
+  }, [appHost, wizardPath]);
 
   const handleUpdateStatus = async () => {
     setUpdating(true);
@@ -566,6 +581,32 @@ function OrderDetailView({
     } else {
       toast({ title: "Error", description: res.error, variant: "error" });
     }
+  };
+
+  const handleResetOnboarding = async () => {
+    if (
+      !window.confirm(
+        "¿Reiniciar el wizard de este pedido? Se desvincula el perfil y se recrea la cuenta si hace falta.",
+      )
+    ) {
+      return;
+    }
+    setResetting(true);
+    const res = await resetOrderOnboarding(order.id);
+    setResetting(false);
+    if (!res.ok) {
+      toast({ title: "Error", description: res.error, variant: "error" });
+      return;
+    }
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : `https://${appHost}`;
+    const url = `${origin}${res.onboardingPath}`;
+    await navigator.clipboard.writeText(url);
+    toast({
+      title: "Onboarding reiniciado",
+      description: "Link con token copiado al portapapeles",
+      variant: "success",
+    });
   };
 
   return (
@@ -617,11 +658,11 @@ function OrderDetailView({
                   Link de configuración del cliente
                 </p>
                 <p className="text-[11px] text-violet-800/80">
-                  Si el cliente se quedó en la pantalla de carga o salió de la página, enviále este link para continuar el wizard.
+                  Incluye el token de acceso (`?t=`). Sin eso el cliente ve 404 si no está logueado.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <a
-                    href={`/onboarding/${order.id}`}
+                    href={wizardPath}
                     target="_blank"
                     rel="noreferrer"
                     className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#7000FF] px-3 py-2 text-xs font-semibold text-white hover:bg-[#8A2BE2] transition-colors"
@@ -635,14 +676,24 @@ function OrderDetailView({
                     variant="outline"
                     className="text-xs gap-1.5"
                     onClick={async () => {
-                      const url = `${typeof window !== "undefined" ? window.location.origin : `https://${appHost}`}/onboarding/${order.id}`;
-                      await navigator.clipboard.writeText(url);
-                      toast({ title: "Link copiado", description: url, variant: "success" });
+                      await navigator.clipboard.writeText(wizardUrl);
+                      toast({ title: "Link copiado", description: wizardUrl, variant: "success" });
                     }}
                   >
                     Copiar link
                   </Button>
                 </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="w-full text-xs gap-1.5 border-amber-300 text-amber-900 hover:bg-amber-50"
+                  disabled={resetting || order.paymentStatus !== "APPROVED"}
+                  onClick={handleResetOnboarding}
+                >
+                  {resetting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  Reiniciar onboarding (soporte)
+                </Button>
                 {order.profile?.slug && (
                   <a
                     href={`/${order.profile.slug}`}
