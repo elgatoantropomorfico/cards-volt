@@ -83,7 +83,7 @@ export function LandingStore({
               <Link href="/login" className="hover:text-foreground">
                 Acceder al panel
               </Link>
-              <a href="#tarjetas" className="hover:text-foreground">
+              <a href="#catalogo" className="hover:text-foreground">
                 Comprar tarjetas
               </a>
             </div>

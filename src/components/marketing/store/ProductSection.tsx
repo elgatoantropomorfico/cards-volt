@@ -110,7 +110,7 @@ export function ProductSection({
   >;
 
   return (
-    <section id="tarjetas" className="scroll-mt-20">
+    <section id="catalogo" className="scroll-mt-20">
       <div className="mx-auto mb-10 max-w-2xl text-center">
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-violet-600">Catálogo</p>
         <h2 className="font-display mt-2 text-3xl font-semibold tracking-tight md:text-4xl">

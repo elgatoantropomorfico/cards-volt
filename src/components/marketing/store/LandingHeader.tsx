@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { ShoppingBag } from "lucide-react";
 
 const NAV = [
-  { href: "#tarjetas", label: "Tarjetas" },
+  { href: "#catalogo", label: "Tarjetas" },
   { href: "#social", label: "Social Media" },
 ];
 
@@ -28,10 +28,10 @@ export function LandingHeader() {
         </Link>
 
         <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-          <a key="#tarjetas" href="#tarjetas" className="transition hover:text-foreground">
+          <a href="#catalogo" className="transition hover:text-foreground">
             Tarjetas
           </a>
-          <a key="#social" href="#social" className="transition hover:text-foreground">
+          <a href="#social" className="transition hover:text-foreground">
             Social Media
           </a>
           <Link href="/login" className="transition hover:text-foreground">
@@ -56,7 +56,7 @@ export function LandingHeader() {
               {count}
             </span>
           </button>
-          <a href="#tarjetas" className="hidden sm:block">
+          <a href="#catalogo" className="hidden sm:block">
             <Button variant="gradient" size="sm">
               Comprar
             </Button>

@@ -76,6 +76,35 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
     setConnectRight(0);
   }, []);
 
+  const isStoreHash = React.useCallback((hash = window.location.hash) => {
+    const h = hash.replace(/^#/, "").toLowerCase();
+    return h === "catalogo" || h === "tarjetas" || h === "ecommerce";
+  }, []);
+
+  const scrollToCatalog = React.useCallback(() => {
+    document.getElementById("catalogo")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  // Ads / deep-link: /#catalogo skips cinematic intro and lands on catalog
+  React.useLayoutEffect(() => {
+    if (!isStoreHash()) return;
+    pendingStoreScrollRef.current = true;
+    lockIntro({ toStore: true });
+  }, [isStoreHash, lockIntro]);
+
+  React.useEffect(() => {
+    const onHash = () => {
+      if (!isStoreHash()) return;
+      if (!introLockedRef.current) {
+        lockIntro({ toStore: true });
+      } else {
+        scrollToCatalog();
+      }
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, [isStoreHash, lockIntro, scrollToCatalog]);
+
   // Collapse track + fix scroll BEFORE paint — avoids 1-frame jump to footer
   React.useLayoutEffect(() => {
     if (!introLocked) return;
@@ -83,18 +112,22 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
     progressSmoothRef.current = 1;
     sampleRef.current = sampleProductSequence(1, layoutBiasRef.current, viewOptsFromFit(viewportFitRef.current));
 
-    if (pendingStoreScrollRef.current) {
+    if (pendingStoreScrollRef.current || isStoreHash()) {
       pendingStoreScrollRef.current = false;
-      document.getElementById("tarjetas")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Wait a frame so track height collapses before measuring catalog offset
+      requestAnimationFrame(() => scrollToCatalog());
       return;
     }
     // Natural end: stay on the final hero (never leave a huge scrollY after height collapse)
     window.scrollTo({ top: 0, behavior: "auto" });
-  }, [introLocked]);
+  }, [introLocked, isStoreHash, scrollToCatalog]);
 
   React.useLayoutEffect(() => {
     if ("scrollRestoration" in history) history.scrollRestoration = "manual";
-    window.scrollTo(0, 0);
+    // Don't wipe hash deep-links destined for the catalog
+    if (!isStoreHash()) {
+      window.scrollTo(0, 0);
+    }
     progressTargetRef.current = 0;
     progressSmoothRef.current = 0;
     setContentOpacity(0);
@@ -106,11 +139,11 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
     setConnectRight(0);
     setConnectLeftSweep(0);
     setConnectRightSweep(0);
-  }, []);
+  }, [isStoreHash]);
 
   React.useEffect(() => {
     const reset = () => {
-      if (introLockedRef.current) return;
+      if (introLockedRef.current || isStoreHash()) return;
       window.scrollTo(0, 0);
       progressTargetRef.current = 0;
       progressSmoothRef.current = 0;
@@ -127,7 +160,7 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
       window.clearTimeout(t1);
       window.removeEventListener("pageshow", onPageShow);
     };
-  }, []);
+  }, [isStoreHash]);
 
   React.useEffect(() => {
     const id = window.requestAnimationFrame(() => setMountScene(true));
@@ -250,11 +283,14 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
   }, [boot]);
 
   const skipToStore = React.useCallback(() => {
+    if (window.location.hash !== "#catalogo") {
+      history.replaceState(null, "", "#catalogo");
+    }
     lockIntro({ toStore: true });
   }, [lockIntro]);
 
   // Full-bleed sticky stage under fixed header; tall scrub until locked.
-  // On mobile locked, uses natural height so #tarjetas flows immediately without dead space.
+  // On mobile locked, uses natural height so #catalogo flows immediately without dead space.
   const isMobileLocked = introLocked && !isDesktop;
   const trackClass = isMobileLocked
     ? "h-auto min-h-0"
@@ -402,7 +438,7 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
               </p>
 
               <div className="mt-6 flex flex-wrap gap-3 md:mt-8">
-                <a href="#tarjetas" className="pointer-events-auto">
+                <a href="#catalogo" className="pointer-events-auto">
                   <Button variant="gradient" size="lg" className="h-11 px-6 md:h-12 md:px-7">
                     Ver tarjetas <ArrowRight className="h-4 w-4" />
                   </Button>
