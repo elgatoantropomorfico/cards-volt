@@ -25,9 +25,6 @@ type ProfileOpt = { id: string; label: string };
 function applyAssign(cards: CardRow[], cardId: string, profileId: string | null, profiles: ProfileOpt[]): CardRow[] {
   const now = new Date().toISOString();
   return cards.map((c) => {
-    if (profileId && c.profileId === profileId && c.id !== cardId) {
-      return { ...c, profileId: null, profileLabel: null, status: "UNASSIGNED" as const, assignedAt: null };
-    }
     if (c.id !== cardId) return c;
     if (profileId) {
       const p = profiles.find((x) => x.id === profileId);

@@ -134,8 +134,11 @@ export function ProfileSection({
             <Field label="Empresa">
               <Input value={profile.companyName ?? ""} onChange={(e) => onChange({ companyName: e.target.value })} />
             </Field>
-            <Field label="Email">
+            <Field label="Email de contacto (público)">
               <Input type="email" value={profile.email ?? ""} onChange={(e) => onChange({ email: e.target.value })} />
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Este es el email que se muestra en tu tarjeta. No es el email de login de la cuenta.
+              </p>
             </Field>
             <Field label="Teléfono">
               <Input value={profile.phone ?? ""} onChange={(e) => onChange({ phone: e.target.value })} placeholder="+54 9 11 ..." />
