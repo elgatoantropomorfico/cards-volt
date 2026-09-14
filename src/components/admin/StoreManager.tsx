@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   RefreshCw,
   Mail,
+  Send,
   Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
