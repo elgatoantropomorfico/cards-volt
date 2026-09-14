@@ -146,6 +146,32 @@ export async function updateAdminOrderStatus(input: {
 }
 
 /**
+ * Deletes unpaid / abandoned checkout junk (PENDING, REJECTED, CANCELLED).
+ * Never deletes APPROVED orders.
+ */
+export async function deleteAdminOrder(orderId: string) {
+  await requireRole("SUPERADMIN");
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { id: true, orderNumber: true, paymentStatus: true },
+  });
+  if (!order) return { ok: false as const, error: "Orden no encontrada" };
+
+  if (order.paymentStatus === "APPROVED") {
+    return {
+      ok: false as const,
+      error: "No se pueden eliminar pedidos con pago APPROVED",
+    };
+  }
+
+  await prisma.order.delete({ where: { id: orderId } });
+
+  revalidatePath("/admin");
+  return { ok: true as const, orderNumber: order.orderNumber };
+}
+
+/**
  * Ajuste manual de inventario con trazabilidad
  */
 export async function recordInventoryAdjustment(input: {

@@ -24,7 +24,7 @@ import {
   ShieldCheck,
   RefreshCw,
   Mail,
-  Send,
+  Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "@/components/ui/toaster";
 import {
   updateAdminOrderStatus,
+  deleteAdminOrder,
   recordInventoryAdjustment,
   updateStoreSettings,
   updateAdminProduct,
@@ -77,10 +78,38 @@ export function StoreManager({
   mailboxes: MailboxRow[];
   appHost: string;
 }) {
+  const router = useRouter();
   const [tab, setTab] = React.useState<StoreTab>("dashboard");
   const [selectedOrderId, setSelectedOrderId] = React.useState<string | null>(null);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
 
   const selectedOrder = orders.find((o) => o.id === selectedOrderId);
+
+  const canDeleteOrder = (o: { paymentStatus: string }) =>
+    o.paymentStatus === "PENDING" ||
+    o.paymentStatus === "REJECTED" ||
+    o.paymentStatus === "CANCELLED";
+
+  const handleDeleteOrder = async (order: { id: string; orderNumber: string; paymentStatus: string }) => {
+    if (!canDeleteOrder(order)) return;
+    if (
+      !window.confirm(
+        `¿Eliminar el pedido ${order.orderNumber} (${order.paymentStatus})? Esta acción no se puede deshacer.`,
+      )
+    ) {
+      return;
+    }
+    setDeletingId(order.id);
+    const res = await deleteAdminOrder(order.id);
+    setDeletingId(null);
+    if (!res.ok) {
+      toast({ title: "No se pudo eliminar", description: res.error, variant: "error" });
+      return;
+    }
+    if (selectedOrderId === order.id) setSelectedOrderId(null);
+    toast({ title: "Pedido eliminado", description: order.orderNumber, variant: "success" });
+    router.refresh();
+  };
 
   return (
     <div className="space-y-6">
@@ -266,6 +295,9 @@ export function StoreManager({
               order={selectedOrder}
               appHost={appHost}
               onBack={() => setSelectedOrderId(null)}
+              canDelete={canDeleteOrder(selectedOrder)}
+              deleting={deletingId === selectedOrder.id}
+              onDelete={() => handleDeleteOrder(selectedOrder)}
             />
           ) : (
             <div className="overflow-x-auto rounded-2xl border bg-card shadow-soft">
@@ -333,14 +365,32 @@ export function StoreManager({
                         {o.shippingStatus}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedOrderId(o.id)}
-                          className="text-xs gap-1"
-                        >
-                          Ver detalle <ChevronRight className="h-3.5 w-3.5" />
-                        </Button>
+                        <div className="inline-flex items-center gap-1">
+                          {canDeleteOrder(o) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteOrder(o)}
+                              disabled={deletingId === o.id}
+                              className="text-xs gap-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                              title="Eliminar pedido sin pago"
+                            >
+                              {deletingId === o.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedOrderId(o.id)}
+                            className="text-xs gap-1"
+                          >
+                            Ver detalle <ChevronRight className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -541,10 +591,16 @@ function OrderDetailView({
   order,
   appHost,
   onBack,
+  canDelete,
+  deleting,
+  onDelete,
 }: {
   order: any;
   appHost: string;
   onBack: () => void;
+  canDelete: boolean;
+  deleting: boolean;
+  onDelete: () => void;
 }) {
   const [updating, setUpdating] = React.useState(false);
   const [fulfillment, setFulfillment] = React.useState(order.fulfillmentStatus);
@@ -583,17 +639,30 @@ function OrderDetailView({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <Button variant="outline" size="sm" onClick={onBack} className="gap-2">
           ← Volver al listado
         </Button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <Badge variant="outline" className="font-mono">
             {order.orderNumber}
           </Badge>
           <Badge variant={order.paymentStatus === "APPROVED" ? "success" : "secondary"}>
             {order.paymentStatus}
           </Badge>
+          {canDelete && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-1.5 border-rose-200 text-rose-700 hover:bg-rose-50"
+              disabled={deleting}
+              onClick={onDelete}
+            >
+              {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              Eliminar pedido
+            </Button>
+          )}
         </div>
       </div>
 
