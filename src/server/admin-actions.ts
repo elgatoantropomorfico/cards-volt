@@ -136,15 +136,47 @@ export async function deleteUser(userId: string): Promise<ActionResult> {
   const target = await prisma.user.findUnique({ where: { id: userId } });
   if (!target) return { ok: false, error: "No existe" };
   if (target.role === "SUPERADMIN") return { ok: false, error: "No podés eliminar un superadmin" };
-  // Order.userId has no FK — clear it so onboarding can reprovision by email
+
+  // Leave linked paid orders at day-1: same accessToken (email link) still works.
+  const linkedOrders = await prisma.order.findMany({
+    where: { userId },
+    select: { id: true },
+  });
+  const orderIds = linkedOrders.map((o) => o.id);
+
   await prisma.$transaction([
-    prisma.order.updateMany({
-      where: { userId },
-      data: { userId: null, profileId: null },
-    }),
+    ...(orderIds.length
+      ? [
+          prisma.order.updateMany({
+            where: { id: { in: orderIds } },
+            data: {
+              userId: null,
+              profileId: null,
+              fulfillmentStatus: "AWAITING_PROFILE",
+            },
+          }),
+          prisma.orderSeat.updateMany({
+            where: { orderId: { in: orderIds }, status: "PRIMARY" },
+            data: { profileId: null },
+          }),
+          prisma.orderEvent.createMany({
+            data: orderIds.map((orderId) => ({
+              orderId,
+              type: "buyer.deleted",
+              title: "Cuenta eliminada — pedido en cero",
+              detail:
+                "Se borró la cuenta asociada. El link del correo sigue válido; al abrirlo el wizard arranca como el día 1.",
+            })),
+          }),
+        ]
+      : []),
     prisma.user.delete({ where: { id: userId } }),
   ]);
+
   revalidatePath("/admin");
+  for (const id of orderIds) {
+    revalidatePath(`/onboarding/${id}`);
+  }
   return { ok: true };
 }
 

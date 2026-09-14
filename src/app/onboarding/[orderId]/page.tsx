@@ -4,7 +4,7 @@ import { profileToView } from "@/server/profile-shape";
 import { OnboardingWizard } from "./OnboardingWizard";
 import { ProfileChoiceClient } from "./ProfileChoiceClient";
 import { assertOrderAccess } from "@/server/order-access";
-import { repairOrderBuyerBinding } from "@/server/ensure-order-buyer";
+import { ensureBuyerForOnboardingLink } from "@/server/ensure-order-buyer";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +57,19 @@ async function unlinkAccidentalReadyProfile(order: {
   return true;
 }
 
+async function reloadOrder(orderId: string) {
+  return prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      profile: {
+        include: {
+          links: { orderBy: { order: "asc" } },
+        },
+      },
+    },
+  });
+}
+
 export default async function OnboardingPage({
   params,
   searchParams,
@@ -72,113 +85,52 @@ export default async function OnboardingPage({
     notFound();
   }
 
-  let order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: {
-      profile: {
-        include: {
-          links: { orderBy: { order: "asc" } },
-        },
-      },
-    },
-  });
-
-  if (!order) {
-    notFound();
-  }
+  let order = await reloadOrder(orderId);
+  if (!order) notFound();
 
   const didUnlink = await unlinkAccidentalReadyProfile(order);
   if (didUnlink) {
-    order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: {
-        profile: {
-          include: {
-            links: { orderBy: { order: "asc" } },
-          },
-        },
-      },
-    });
+    order = await reloadOrder(orderId);
     if (!order) notFound();
   }
 
-  // Missing / deleted buyer or profile → recreate by order email (support recovery)
+  // Email link is the access key: if account/profile was wiped, provision day-1 here
   if (!order.profile) {
-    const repair = await repairOrderBuyerBinding(order.id);
-    if (repair.repaired) {
-      order = await prisma.order.findUnique({
-        where: { id: orderId },
-        include: {
-          profile: {
-            include: {
-              links: { orderBy: { order: "asc" } },
-            },
-          },
-        },
-      });
+    const ensured = await ensureBuyerForOnboardingLink(order.id);
+    if (ensured.provisioned || ensured.needsProfileChoice) {
+      order = await reloadOrder(orderId);
       if (!order) notFound();
     }
   }
 
-  // Existing account with profiles but this order not linked yet → choice UI
   if (!order.profileId && order.userId) {
-    const userExists = await prisma.user.findUnique({
-      where: { id: order.userId },
-      select: { id: true },
+    const existingProfiles = await prisma.profile.findMany({
+      where: { userId: order.userId },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        slug: true,
+        fullName: true,
+        profileStatus: true,
+      },
     });
 
-    if (!userExists) {
-      const repair = await repairOrderBuyerBinding(order.id);
-      if (!repair.repaired) notFound();
-      order = await prisma.order.findUnique({
-        where: { id: orderId },
-        include: {
-          profile: {
-            include: {
-              links: { orderBy: { order: "asc" } },
-            },
-          },
-        },
-      });
-      if (!order) notFound();
-    } else {
-      const existingProfiles = await prisma.profile.findMany({
-        where: { userId: order.userId },
-        orderBy: { updatedAt: "desc" },
-        select: {
-          id: true,
-          slug: true,
-          fullName: true,
-          profileStatus: true,
-        },
-      });
-
-      if (existingProfiles.length > 0) {
-        return (
-          <ProfileChoiceClient
-            orderId={order.id}
-            orderNumber={order.orderNumber}
-            accessToken={access.order.accessToken}
-            profiles={existingProfiles}
-          />
-        );
-      }
-
-      // User exists but has zero profiles (deleted profiles only) -> create one
-      const repair = await repairOrderBuyerBinding(order.id);
-      if (!repair.repaired) notFound();
-      order = await prisma.order.findUnique({
-        where: { id: orderId },
-        include: {
-          profile: {
-            include: {
-              links: { orderBy: { order: "asc" } },
-            },
-          },
-        },
-      });
-      if (!order) notFound();
+    if (existingProfiles.length > 0) {
+      return (
+        <ProfileChoiceClient
+          orderId={order.id}
+          orderNumber={order.orderNumber}
+          accessToken={access.order.accessToken}
+          profiles={existingProfiles}
+        />
+      );
     }
+
+    // User still there but profiles deleted → day-1 pending profile via the same link
+    const ensured = await ensureBuyerForOnboardingLink(order.id);
+    if (!ensured.provisioned) notFound();
+    order = await reloadOrder(orderId);
+    if (!order?.profile) notFound();
   }
 
   if (!order.profile) {

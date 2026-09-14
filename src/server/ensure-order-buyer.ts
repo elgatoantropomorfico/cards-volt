@@ -3,17 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { createEcommerceProfile } from "@/server/create-ecommerce-profile";
 
 /**
- * Repairs orders left with a dangling userId (User deleted) or missing profile
- * after support resets fulfillment / deletes the buyer account.
+ * When the customer opens the email onboarding link and the order has no
+ * usable buyer/profile (e.g. admin deleted the account), provision the same
+ * day-1 state as post-payment fulfillment: User + pending Profile.
  *
- * - Rebinds buyer by email (create User if needed)
- * - If that user has profiles → leave profileId null (choice UI)
- * - If not → create a fresh PENDING ecommerce profile and link it
- *
- * Does nothing when the order is already in a valid "choose profile" state.
+ * Does not invent accounts from admin tools — only when the tokenized link is used.
  */
-export async function repairOrderBuyerBinding(orderId: string): Promise<{
-  repaired: boolean;
+export async function ensureBuyerForOnboardingLink(orderId: string): Promise<{
+  provisioned: boolean;
   needsProfileChoice: boolean;
 }> {
   const order = await prisma.order.findUnique({
@@ -31,7 +28,7 @@ export async function repairOrderBuyerBinding(orderId: string): Promise<{
   });
 
   if (!order || order.paymentStatus !== "APPROVED") {
-    return { repaired: false, needsProfileChoice: false };
+    return { provisioned: false, needsProfileChoice: false };
   }
 
   if (order.profileId) {
@@ -40,12 +37,12 @@ export async function repairOrderBuyerBinding(orderId: string): Promise<{
       select: { id: true },
     });
     if (linked) {
-      return { repaired: false, needsProfileChoice: false };
+      return { provisioned: false, needsProfileChoice: false };
     }
   }
 
-  // Valid multi-profile choice: live user, no profile linked yet
-  if (order.userId && !order.profileId) {
+  // Live user with other profiles and no link → choice UI (no auto-create)
+  if (order.userId) {
     const liveUser = await prisma.user.findUnique({
       where: { id: order.userId },
       select: { id: true },
@@ -53,26 +50,43 @@ export async function repairOrderBuyerBinding(orderId: string): Promise<{
     if (liveUser) {
       const count = await prisma.profile.count({ where: { userId: liveUser.id } });
       if (count > 0) {
-        return { repaired: false, needsProfileChoice: true };
+        return { provisioned: false, needsProfileChoice: true };
       }
-      // Live user with zero profiles → create one below
+    } else {
+      // Orphan userId from a delete that didn't clear — wipe before day-1 provision
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { userId: null, profileId: null },
+      });
     }
   }
 
-  let userId = order.userId;
-  let user =
-    userId != null
-      ? await prisma.user.findUnique({ where: { id: userId }, select: { id: true } })
-      : null;
+  // Prefer existing account by purchase email (re-buy / soft recovery)
+  let user = await prisma.user.findUnique({
+    where: { email: order.email },
+    select: { id: true },
+  });
 
-  if (!user) {
-    user = await prisma.user.findUnique({
-      where: { email: order.email },
-      select: { id: true },
-    });
-  }
-
-  if (!user) {
+  if (user) {
+    const count = await prisma.profile.count({ where: { userId: user.id } });
+    if (count > 0) {
+      await prisma.$transaction([
+        prisma.order.update({
+          where: { id: order.id },
+          data: {
+            userId: user.id,
+            profileId: null,
+            fulfillmentStatus: "AWAITING_PROFILE",
+          },
+        }),
+        prisma.orderSeat.updateMany({
+          where: { orderId: order.id, status: "PRIMARY" },
+          data: { profileId: null },
+        }),
+      ]);
+      return { provisioned: true, needsProfileChoice: true };
+    }
+  } else {
     const newUserId = generatePublicId() + generatePublicId();
     user = await prisma.user.create({
       data: {
@@ -86,36 +100,8 @@ export async function repairOrderBuyerBinding(orderId: string): Promise<{
     });
   }
 
-  userId = user.id;
-  const existingCount = await prisma.profile.count({ where: { userId } });
-
-  if (existingCount > 0) {
-    await prisma.$transaction([
-      prisma.order.update({
-        where: { id: order.id },
-        data: {
-          userId,
-          profileId: null,
-          events: {
-            create: {
-              type: "buyer.rebound",
-              title: "Comprador revinculado",
-              detail:
-                "La cuenta del pedido no existía o quedó huérfana. Se revinculó por email; el cliente debe elegir perfil.",
-            },
-          },
-        },
-      }),
-      prisma.orderSeat.updateMany({
-        where: { orderId: order.id, status: "PRIMARY" },
-        data: { profileId: null },
-      }),
-    ]);
-    return { repaired: true, needsProfileChoice: true };
-  }
-
   const profile = await createEcommerceProfile({
-    userId,
+    userId: user.id,
     fullName: order.customerName,
     email: order.email,
     phone: order.phone,
@@ -127,13 +113,14 @@ export async function repairOrderBuyerBinding(orderId: string): Promise<{
     prisma.order.update({
       where: { id: order.id },
       data: {
-        userId,
+        userId: user.id,
         profileId: profile.id,
+        fulfillmentStatus: "AWAITING_PROFILE",
         events: {
           create: {
-            type: "buyer.reprovisioned",
-            title: "Cuenta y perfil recreados",
-            detail: `Se recreó la cuenta del comprador y un perfil pendiente /${profile.slug} para continuar el wizard.`,
+            type: "onboarding.day1_from_link",
+            title: "Wizard reiniciado desde el link",
+            detail: `Cuenta/perfil pendientes recreados al abrir el link del correo (/${profile.slug}).`,
           },
         },
       },
@@ -144,5 +131,5 @@ export async function repairOrderBuyerBinding(orderId: string): Promise<{
     }),
   ]);
 
-  return { repaired: true, needsProfileChoice: false };
+  return { provisioned: true, needsProfileChoice: false };
 }
