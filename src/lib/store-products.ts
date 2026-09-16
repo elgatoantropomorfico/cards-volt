@@ -111,7 +111,7 @@ export function buildWhatsAppCheckoutMessage(items: CartLine[]): string | null {
     "",
     ...lines.flatMap((line) => [
       `• ${line.product.name} × ${line.quantity}`,
-      `  ${formatArs(line.product.monthlyPrice)}/mes · Plan anual: ${formatArs(line.lineTotal)}`,
+      `  ${formatArs(line.annualEach)}/año (equiv. ${formatArs(line.product.monthlyPrice)}/mes) × ${line.quantity} = ${formatArs(line.lineTotal)}`,
       "",
     ]),
     "─────────────────",

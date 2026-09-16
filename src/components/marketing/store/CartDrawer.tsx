@@ -120,7 +120,7 @@ export function CartDrawer() {
                           <p className="text-xs font-semibold mt-1">
                             {formatArs(line.annualEach)}
                             <span className="text-[10px] text-muted-foreground font-normal ml-1">
-                              ({formatArs(line.product.monthlyPrice)}/mes)
+                              /año · equiv. {formatArs(line.product.monthlyPrice)}/mes
                             </span>
                           </p>
                         </div>

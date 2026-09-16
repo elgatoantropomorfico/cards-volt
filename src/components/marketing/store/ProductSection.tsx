@@ -61,12 +61,12 @@ function ProductCard({
         <p className="mt-1 text-sm text-muted-foreground">{displayTagline}</p>
 
         <div className="mt-4 flex items-baseline gap-1.5">
-          <span className="font-display text-2xl font-semibold">{formatArs(monthly)}</span>
-          <span className="text-sm text-muted-foreground">/ mes</span>
+          <span className="font-display text-2xl font-semibold">{formatArs(annual)}</span>
+          <span className="text-sm text-muted-foreground">/ año</span>
         </div>
         <p className="mt-1 text-[12px] text-muted-foreground">
-          Facturación anual ·{" "}
-          <span className="font-medium text-foreground">{formatArs(annual)}</span> por tarjeta
+          Pago único anual por tarjeta · equivale a{" "}
+          <span className="font-medium text-foreground">{formatArs(monthly)}</span>/mes
         </p>
 
         <ul className="mt-5 space-y-2">

@@ -448,7 +448,7 @@ export function LandingHero({ fill = true }: { fill?: boolean }) {
               <div className="mt-5 flex flex-wrap gap-3 text-[11px] text-muted-foreground md:mt-8 md:gap-4 md:text-[12px]">
                 <span className="inline-flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5 text-violet-600" />
-                  Desde $18.000/mes · plan anual
+                  Desde $216.000/año · pago anual
                 </span>
                 <span>NFC + QR incluidos</span>
                 <span>Social Media incluido</span>
